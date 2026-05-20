@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Merenda - IA</title>
+    <link rel="stylesheet" href="merenda.css">
+</head>
+<body>
+    
+    <div class="painel-principal">
+        <header>
+            <h1>Sistema de Merenda Escolar</h1>
+            <p>Reconhecimento Facial Integrado</p>
+        </header>
+
+        <div id="statusCatraca" class="status bloqueado">
+            INICIALIZANDO IA...
+        </div>
+
+        <div class="painel-escolha">
+            <h3>O que você vai comer hoje?</h3>
+            <div class="botoes-refeicao">
+                <button id="btnCafe" class="btn-opcao">☕ Café</button>
+                <button id="btnAlmoco" class="btn-opcao">🍛 Almoço</button>
+                <button id="btnAmbos" class="btn-opcao">🍽️ Os Dois</button>
+            </div>
+        </div>
+
+        <div class="controles">
+            <button id="btnLigar" class="btn-primario">Ligar Câmera</button>
+            <button id="btnReset" class="btn-secundario">Zerar Lista</button>
+            <button id="btnExportar" class="btn-terciario">Baixar Relatório</button>
+        </div>
+        
+        <div id="containerVideo">
+            <video id="videoEscola" autoplay muted></video>
+        </div>
+
+        <div class="historico-container">
+            <h3>Alunos Confirmados</h3>
+            <table id="tabelaHistorico">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Refeição</th> <th>Horário</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="corpoTabela">
+                </tbody>
+            </table>
+        </div>
+
+        <div id="fotosBiblioteca" style="display: none;">
+            <img id="Kaio" src="aluno.jpg">
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

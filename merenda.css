@@ -1,0 +1,229 @@
+/* Configurações Globais e Variáveis de Cores */
+:root {
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --bg-body: #f8fafc;
+    --bg-card: #ffffff;
+    --text-main: #1e293b;
+    --text-sub: #64748b;
+    
+    /* Cores de Status */
+    --status-bloqueado: #ef4444; /* Vermelho */
+    --status-liberado: #22c55e;  /* Verde */
+    --status-alerta: #f59e0b;    /* Laranja */
+    
+    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --radius: 12px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+body {
+    background-color: var(--bg-body);
+    color: var(--text-main);
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* Painel Principal */
+.painel-principal {
+    width: 100%;
+    max-width: 900px;
+    background: var(--bg-card);
+    padding: 30px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+header h1 {
+    font-size: 1.8rem;
+    color: var(--primary);
+    margin-bottom: 5px;
+}
+
+header p {
+    color: var(--text-sub);
+    font-size: 0.95rem;
+}
+
+/* Status da Catraca (Feedback Visual) */
+.status {
+    text-align: center;
+    padding: 15px;
+    border-radius: var(--radius);
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-bottom: 25px;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.bloqueado { background-color: #fee2e2; color: var(--status-bloqueado); border: 2px solid var(--status-bloqueado); }
+.liberado { background-color: #dcfce7; color: var(--status-liberado); border: 2px solid var(--status-liberado); }
+.alerta { background-color: #fef3c7; color: var(--status-alerta); border: 2px solid var(--status-alerta); }
+
+/* Painel de Escolha de Refeição */
+.painel-escolha {
+    background: #f1f5f9;
+    padding: 20px;
+    border-radius: var(--radius);
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.painel-escolha h3 {
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    color: var(--text-main);
+}
+
+.botoes-refeicao {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-opcao {
+    background: white;
+    border: 2px solid #cbd5e1;
+    padding: 12px 20px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-opcao:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.btn-opcao.ativo {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+/* Controles de Câmera e Relatório */
+.controles {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 25px;
+}
+
+button {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: filter 0.2s;
+}
+
+.btn-primario { background: var(--primary); color: white; }
+.btn-secundario { background: #64748b; color: white; }
+.btn-terciario { background: #0f172a; color: white; }
+
+button:hover {
+    filter: brightness(1.2);
+}
+
+/* Container do Vídeo e Canvas */
+#containerVideo {
+    position: relative;
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto 30px;
+    background: #000;
+    border-radius: var(--radius);
+    overflow: hidden;
+    line-height: 0;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2);
+}
+
+video {
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius);
+}
+
+canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+/* Tabela de Histórico */
+.historico-container {
+    margin-top: 30px;
+    border-top: 2px solid #f1f5f9;
+    padding-top: 20px;
+}
+
+.historico-container h3 {
+    margin-bottom: 15px;
+    color: var(--text-sub);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+th {
+    text-align: left;
+    background: #f8fafc;
+    padding: 12px;
+    color: var(--text-sub);
+    border-bottom: 2px solid #e2e8f0;
+}
+
+td {
+    padding: 12px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+tr:hover {
+    background-color: #f8fafc;
+}
+
+/* Tags dentro da tabela */
+.tag-sucesso {
+    background: #dcfce7;
+    color: #166534;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+/* Responsividade */
+@media (max-width: 600px) {
+    .controles, .botoes-refeicao {
+        flex-direction: column;
+    }
+    
+    .btn-opcao, button {
+        width: 100%;
+    }
+}
