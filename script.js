@@ -20,9 +20,9 @@ const STUDENTS = [
 
 let students = JSON.parse(JSON.stringify(STUDENTS)); // cópia mutável
 
-/* ── ESTADO DE AUTENTICAÇÃO ──────────────────────────────── */
+/* ── ESTADO DE AUTENTICAÇÃO (Bloqueio Estrito) ───────────── */
 let isLoggedIn = false;
-let currentUser = null;
+let loggedInRole = null; // Guarda a única aba permitida após o login
 
 /* ── UTILITÁRIOS ─────────────────────────────────────────── */
 const $ = id => document.getElementById(id);
@@ -41,25 +41,25 @@ function formatDate() {
   return new Date().toLocaleDateString("pt-BR", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
 }
 
-/* ── NAVEGAÇÃO ───────────────────────────────────────────── */
-const ROLE_DEST = { aluno:"aluno", coordenacao:"coordenacao", cozinha:"cozinha" };
+/* ── NAVEGAÇÃO E CONTROLE DE ACESSO ──────────────────────── */
 let activeRole = "aluno";
 let facialActive = false;
 
 function goTo(name) {
-  // Desativa câmera ao sair da tela facial
-  if (facialActive && name !== "facial") {
-    stopCamera();
+  // Desativa a câmera ao sair da aba facial
+  if (facialActive && name !== "facial") stopCamera();
+
+  // CONTROLE DE ACESSO ESTRITO
+  // Se tentar ir para aluno, coordenação ou cozinha, verifica se está logado E se é a tela permitida
+  if (name === "aluno" || name === "coordenacao" || name === "cozinha") {
+    if (!isLoggedIn || loggedInRole !== name) {
+      $("modal-backdrop").classList.remove("hidden");
+      return;
+    }
   }
 
-  // CONTROLE DE ACESSO: Bloqueia abas protegidas se não estiver logado
-  if (!isLoggedIn && (name === "aluno" || name === "coordenacao" || name === "cozinha")) {
-    $("modal-backdrop").classList.remove("hidden");
-    return;
-  }
-
-  $$(".screen").forEach(s   => s.classList.remove("active"));
-  $$(".nav-tab").forEach(b  => b.classList.remove("active"));
+  $$(".screen").forEach(s => s.classList.remove("active"));
+  $$(".nav-tab").forEach(b => b.classList.remove("active"));
 
   const sc = $("screen-" + name);
   const bt = document.querySelector(`.nav-tab[data-screen="${name}"]`);
@@ -68,53 +68,70 @@ function goTo(name) {
 
   if (name === "coordenacao") renderCoord();
   if (name === "cozinha")     renderCozinha();
-  // Nota: A câmera não inicia mais sozinha ao entrar na aba 'facial'. 
-  // O usuário precisa clicar em "Ligar Câmera".
 }
 
-// Fechar Modal de Acesso Negado e ir para Login
+// Fechar modal de bloqueio
 $("modal-btn-login").addEventListener("click", () => {
   $("modal-backdrop").classList.add("hidden");
   goTo("login");
 });
 
-// Tabs de navegação
+// Abas do Menu de Navegação Superior
 $$(".nav-tab").forEach(btn => {
   btn.addEventListener("click", () => goTo(btn.dataset.screen));
 });
 
-// Seleção de perfil no Login
+// Seleção do Perfil na tela de Login
 $$(".role-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     $$(".role-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     activeRole = btn.dataset.role;
+
+    // Mostra a escolha de Turma apenas se o perfil selecionado for 'Aluno'
+    const groupTurma = $("group-turma");
+    if (activeRole === "aluno") {
+      groupTurma.classList.remove("hidden");
+    } else {
+      groupTurma.classList.add("hidden");
+    }
   });
 });
 
-// Botão de Entrar (Login com Nome e Senha)
+// Lógica de Entrar (Login)
 $("btn-login").addEventListener("click", () => {
   const inputNome = $("input-nome").value.trim();
   const inputSenha = $("input-senha").value.trim();
+  const inputTurma = $("input-turma").value;
 
-  // Validação simples (futuramente será validado no Banco de Dados)
   if (!inputNome || !inputSenha) {
+    $("login-error").textContent = "Nome e senha são obrigatórios.";
     $("login-error").classList.remove("hidden");
     return;
   }
-  
+
+  if (activeRole === "aluno" && !inputTurma) {
+    $("login-error").textContent = "Por favor, selecione sua turma.";
+    $("login-error").classList.remove("hidden");
+    return;
+  }
+
   $("login-error").classList.add("hidden");
   isLoggedIn = true;
-  currentUser = { nome: inputNome, role: activeRole };
+  loggedInRole = activeRole; // Tranca o usuário na aba selecionada
 
-  // Remove o cadeado visual das abas
-  $$(".nav-protected").forEach(tab => tab.classList.add("unlocked"));
+  // Remove o bloqueio visual apenas da aba permitida
+  $$(".nav-protected").forEach(tab => {
+    if (tab.dataset.screen === loggedInRole) tab.classList.add("unlocked");
+    else tab.classList.remove("unlocked");
+  });
 
-  // Se o login for como Aluno, atualiza os dados na tela de boas-vindas
+  // Atualiza as informações da interface se for Aluno
   if (activeRole === "aluno") {
     $("aluno-nome-display").textContent = inputNome;
+    $("aluno-turma-display").textContent = `Turma ${inputTurma} · Ensino Médio`;
     
-    // Gera as iniciais do nome para o Avatar
+    // Cria as iniciais baseadas no nome digitado
     const nameParts = inputNome.split(" ");
     let initials = nameParts[0][0];
     if (nameParts.length > 1) {
@@ -124,25 +141,23 @@ $("btn-login").addEventListener("click", () => {
   }
 
   showToast(`Bem-vindo(a), ${inputNome}!`);
-  goTo(ROLE_DEST[activeRole] || "aluno");
+  goTo(loggedInRole);
 });
 
 /* ── TELA ALUNO ──────────────────────────────────────────── */
 const selectedMeals = { recreio: false, almoco: false };
 
-// Atualiza visual de botões individuais e do botão "Ambas"
 function updateMealUI() {
-  // Atualiza os cards individuais
+  // Atualiza os botões individuais
   ["recreio", "almoco"].forEach(meal => {
     const card = $("meal-" + meal);
     card.classList.toggle("selected", selectedMeals[meal]);
     $("check-" + meal).textContent = selectedMeals[meal] ? "✓" : "";
   });
 
-  // Atualiza o visual do botão "Selecionar Ambas"
+  // Atualiza o botão de "Ambas as refeições"
   const btnAmbas = $("btn-ambas");
   const checkAmbas = $("ambas-check");
-  
   if (selectedMeals.recreio && selectedMeals.almoco) {
     btnAmbas.classList.add("selected");
     checkAmbas.classList.remove("hidden");
@@ -151,7 +166,7 @@ function updateMealUI() {
     checkAmbas.classList.add("hidden");
   }
 
-  // Atualiza o botão final de confirmação
+  // Atualiza o botão de confirmação
   const btnConfirm = $("btn-confirm-order");
   const any = selectedMeals.recreio || selectedMeals.almoco;
   btnConfirm.disabled = !any;
@@ -160,16 +175,14 @@ function updateMealUI() {
 
 // Clicks nos cards individuais
 ["recreio", "almoco"].forEach(meal => {
-  const card = $("meal-" + meal);
-  card.addEventListener("click", () => {
+  $("meal-" + meal).addEventListener("click", () => {
     selectedMeals[meal] = !selectedMeals[meal];
     updateMealUI();
   });
 });
 
-// Click no botão "Selecionar Ambas"
+// Click no botão de Ambas as refeições
 $("btn-ambas").addEventListener("click", () => {
-  // Se ambas já estiverem selecionadas, desmarca as duas. Caso contrário, marca as duas.
   const turnOn = !(selectedMeals.recreio && selectedMeals.almoco);
   selectedMeals.recreio = turnOn;
   selectedMeals.almoco = turnOn;
@@ -178,8 +191,7 @@ $("btn-ambas").addEventListener("click", () => {
 
 $("btn-confirm-order").addEventListener("click", () => {
   $("aluno-order-section").classList.add("hidden");
-  const confirmed = $("aluno-confirmed");
-  confirmed.classList.remove("hidden");
+  $("aluno-confirmed").classList.remove("hidden");
 
   const tags = $("confirmed-tags");
   tags.innerHTML = "";
@@ -265,22 +277,17 @@ $("btn-add-excecao").addEventListener("click", () => {
 /* ── TELA COZINHA ────────────────────────────────────────── */
 function renderCozinha() {
   const dateStr = new Date().toLocaleDateString("pt-BR", { day:"numeric", month:"short", year:"numeric" });
-  const el = $("cz-date");
-  if (el) el.textContent = formatDate();
-  const chip = $("cz-chip-date");
-  if (chip) chip.textContent = dateStr;
+  if ($("cz-date")) $("cz-date").textContent = formatDate();
+  if ($("cz-chip-date")) $("cz-chip-date").textContent = dateStr;
   syncCozinha();
 }
 
 function syncCozinha() {
   const { nRecreo, nAlmoco } = calcStats();
-  const r = $("cz-recreio");
-  const a = $("cz-almoco");
-  if (r) r.textContent = nRecreo;
-  if (a) a.textContent = nAlmoco;
+  if ($("cz-recreio")) $("cz-recreio").textContent = nRecreo;
+  if ($("cz-almoco")) $("cz-almoco").textContent = nAlmoco;
 
-  const sr = $("stat-recreio");
-  if (sr) {
+  if ($("stat-recreio")) {
     const { nRecreo: nr, nAlmoco: na, nTotal: nt, nSem: ns } = calcStats();
     $("stat-recreio").textContent = nr;
     $("stat-almoco").textContent  = na;
@@ -303,25 +310,20 @@ const VIDEO  = $("cam-video");
 const CANVAS = $("cam-canvas");
 const CTX    = CANVAS.getContext("2d");
 
-// Eventos dos botões de Câmera
 $("btn-cam-on").addEventListener("click", () => initFacial());
 $("btn-cam-off").addEventListener("click", () => stopCamera());
 
 function setStatus(dot, text) {
-  const d = $("fs-dot");
-  const t = $("fs-text");
-  d.className = "fs-dot " + dot;
-  t.textContent = text;
+  $("fs-dot").className = "fs-dot " + dot;
+  $("fs-text").textContent = text;
 }
 
 function showOverlay(show, msg = "") {
-  const overlay = $("cam-overlay");
-  const msgEl   = $("cam-msg");
   if (show) {
-    overlay.classList.remove("hidden");
-    msgEl.textContent = msg;
+    $("cam-overlay").classList.remove("hidden");
+    $("cam-msg").textContent = msg;
   } else {
-    overlay.classList.add("hidden");
+    $("cam-overlay").classList.add("hidden");
   }
 }
 
@@ -334,20 +336,8 @@ function stopCamera() {
   showOverlay(true, "Câmera pausada. Pressione 'Ligar Câmera' para iniciar.");
   setStatus("gray", "Câmera desativada");
 
-  // Altera o estado dos botões
   $("btn-cam-on").disabled = false;
   $("btn-cam-off").disabled = true;
-}
-
-function loadScript(src, check) {
-  return new Promise((resolve, reject) => {
-    if (check()) { resolve(); return; }
-    const s = document.createElement("script");
-    s.src = src;
-    s.onload = resolve;
-    s.onerror = () => reject(new Error("Falha ao carregar: " + src));
-    document.head.appendChild(s);
-  });
 }
 
 async function initFacial() {
@@ -357,29 +347,11 @@ async function initFacial() {
   firstFaceAt = null;
 
   $("id-result").classList.add("hidden");
-  showOverlay(true, "Aguardando permissão e inicializando IA...");
-  setStatus("gray", "Carregando modelo de reconhecimento...");
+  showOverlay(true, "Aguardando permissão...");
+  setStatus("gray", "Ligando a câmera...");
 
   try {
-    await loadScript(
-      "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js",
-      () => typeof window.tf !== "undefined"
-    );
-
-    await loadScript(
-      "https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.1.0/dist/blazeface.min.js",
-      () => typeof window.blazeface !== "undefined"
-    );
-
-    setStatus("gray", "Carregando modelo BlazeFace...");
-
-    if (!tfModel) {
-      tfModel = await window.blazeface.load();
-    }
-
-    setStatus("gray", "Solicitando acesso à câmera...");
-    
-    // Pede permissão para a câmera
+    // Tenta obter a câmera do usuário primeiro
     camStream = await navigator.mediaDevices.getUserMedia({
       video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" }
     });
@@ -388,10 +360,19 @@ async function initFacial() {
     await new Promise(res => { VIDEO.onloadedmetadata = res; });
     await VIDEO.play();
 
+    setStatus("gray", "Carregando Inteligência Artificial...");
+    
+    // O modelo tf e blazeface agora vêm direto do HTML
+    if (!tfModel) {
+      if (typeof blazeface === "undefined") {
+          throw new Error("Scripts da IA não encontrados. Verifique o HTML.");
+      }
+      tfModel = await blazeface.load();
+    }
+
     showOverlay(false);
     setStatus("gray", "Posicione o rosto do aluno na câmera");
     
-    // Habilita o botão de desligar e desabilita o de ligar
     $("btn-cam-on").disabled = true;
     $("btn-cam-off").disabled = false;
 
@@ -399,14 +380,17 @@ async function initFacial() {
 
   } catch (err) {
     console.error(err);
-    const msg = err.name === "NotAllowedError"
-      ? "Permissão de câmera negada. Verifique as configurações do navegador."
-      : "Não foi possível iniciar a câmera ou o modelo de IA.";
+    let msg = "Erro ao iniciar câmera ou IA.";
+    
+    if (err.name === "NotAllowedError") {
+      msg = "Permissão negada. Permita o uso da câmera no topo do navegador.";
+    } else if (location.protocol === 'file:') {
+      msg = "Navegadores bloqueiam IA no protocolo file:///. Use uma extensão como 'Live Server'.";
+    }
+
     showOverlay(true, msg);
     setStatus("gray", "Câmera indisponível");
     facialActive = false;
-    
-    // Reseta botões em caso de erro
     $("btn-cam-on").disabled = false;
     $("btn-cam-off").disabled = true;
   }
@@ -454,6 +438,7 @@ function startDetectionLoop() {
         if (elapsed > 2600 && !scanDone) {
           scanDone = true;
           drawSuccess(x1, y1, w, h);
+          // Simula identificação do primeiro aluno
           setTimeout(() => showIdentified(students[0]), 200);
           return;
         }
@@ -463,7 +448,7 @@ function startDetectionLoop() {
         CTX.clearRect(0, 0, CANVAS.width, CANVAS.height);
         setStatus("gray", "Posicione o rosto do aluno na câmera");
       }
-    } catch (_) { /* frame skip silencioso */ }
+    } catch (_) { /* frame skip */ }
 
     rafId = requestAnimationFrame(detect);
   }
@@ -518,8 +503,7 @@ function showIdentified(student) {
   $("ir-name").textContent    = student.name;
   $("ir-turma").textContent   = `Turma ${student.turma} · Ensino Médio`;
 
-  const meals = $("ir-meals");
-  meals.innerHTML = `
+  $("ir-meals").innerHTML = `
     <span class="ir-tag ${student.recreio ? "sim" : "nao"}">
       🥐 1º Recreio — ${student.recreio ? "pediu" : "não pediu"}
     </span>
@@ -542,11 +526,7 @@ $("btn-next-scan").addEventListener("click", () => {
 
 /* ── INICIALIZAÇÃO ───────────────────────────────────────── */
 (function init() {
-  const d = formatDate();
-  const el1 = $("cz-date");
-  const el2 = $("cz-chip-date");
-  if (el1) el1.textContent = d;
-  if (el2) el2.textContent = new Date().toLocaleDateString("pt-BR", { day:"numeric", month:"short", year:"numeric" });
-
+  if ($("cz-date")) $("cz-date").textContent = formatDate();
+  if ($("cz-chip-date")) $("cz-chip-date").textContent = new Date().toLocaleDateString("pt-BR", { day:"numeric", month:"short", year:"numeric" });
   syncCozinha();
 })();
