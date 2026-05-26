@@ -1,63 +1,283 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Merenda - IA</title>
-    <link rel="stylesheet" href="merenda.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Merenda Escolar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    
-    <div class="painel-principal">
-        <header>
-            <h1>Sistema de Merenda Escolar</h1>
-            <p>Reconhecimento Facial Integrado</p>
-        </header>
 
-        <div id="statusCatraca" class="status bloqueado">
-            INICIALIZANDO IA...
-        </div>
-liouys
-        <div class="painel-escolha">
-            <h3>O que você vai comer hoje?</h3> oi tudo bem 
-            <div class="botoes-refeicao">
-                <button id="btnCafe" class="btn-opcao">☕ Café</button>
-                <button id="btnAlmoco" class="btn-opcao">🍛 Almoço</button>
-                <button id="btnAmbos" class="btn-opcao">🍽️ Os Dois</button>
-            </div>
-        </div>
-
-        <div class="controles">
-            <button id="btnLigar" class="btn-primario">Ligar Câmera</button>
-            <button id="btnReset" class="btn-secundario">Zerar Lista</button>
-            <button id="btnExportar" class="btn-terciario">Baixar Relatório</button>
-        </div>
-        
-        <div id="containerVideo">
-            <video id="videoEscola" autoplay muted></video>
-        </div>
-
-        <div class="historico-container">
-            <h3>Alunos Confirmados</h3>
-            <table id="tabelaHistorico">
-                <thead>
-                    <tr>
-                        <th>Nome</th>
-                        <th>Refeição</th> <th>Horário</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody id="corpoTabela">
-                </tbody>
-            </table>
-        </div>
-
-        <div id="fotosBiblioteca" style="display: none;">
-            <img id="Kaio" src="aluno.jpg">
-        </div>
+  <!-- ══ NAV ══════════════════════════════════════════════ -->
+  <nav class="nav" id="main-nav">
+    <div class="nav-brand">
+      <span class="nav-icon">🍽️</span>
+      <span class="nav-name">Merenda</span>
     </div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-screen="login">Login</button>
+      <button class="nav-tab nav-protected" data-screen="aluno">Aluno</button>
+      <button class="nav-tab nav-protected" data-screen="coordenacao">Coordenação</button>
+      <button class="nav-tab nav-protected" data-screen="cozinha">Cozinha</button>
+      <button class="nav-tab" data-screen="facial">Reconhecimento</button>
+    </div>
+  </nav>
 
-    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
-    <script src="script.js"></script>
+  <!-- ══ SCREEN: LOGIN ════════════════════════════════════ -->
+  <section class="screen active" id="screen-login">
+    <div class="login-wrap">
+      <div class="login-left">
+        <div class="login-deco">
+          <span class="deco-num">01</span>
+          <span class="deco-text">Sistema de<br/>Merenda<br/>Escolar</span>
+          <div class="deco-pills">
+            <span class="deco-pill">🥐 Recreio 8:40</span>
+            <span class="deco-pill">🍽️ Almoço 11:30</span>
+          </div>
+        </div>
+      </div>
+      <div class="login-right">
+        <div class="login-card">
+          <div class="lc-header">
+            <div class="lc-mark">🍽️</div>
+            <h1 class="lc-title">Bem-vindo</h1>
+            <p class="lc-sub">Selecione seu perfil e acesse o sistema</p>
+          </div>
+
+          <div class="role-row">
+            <button class="role-btn active" data-role="aluno">Aluno</button>
+            <button class="role-btn" data-role="coordenacao">Coordenação</button>
+            <button class="role-btn" data-role="cozinha">Cozinha</button>
+          </div>
+
+          <div class="field-group">
+            <label class="field-lbl">Nome</label>
+            <input class="field-inp" id="input-nome" type="text" placeholder="Seu nome completo" />
+          </div>
+          <div class="field-group">
+            <label class="field-lbl">Senha</label>
+            <input class="field-inp" id="input-senha" type="password" placeholder="Sua senha" />
+          </div>
+
+          <div class="login-error hidden" id="login-error">
+            Nome e senha são obrigatórios.
+          </div>
+
+          <button class="btn-enter" id="btn-login">Entrar no sistema →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ SCREEN: ALUNO ════════════════════════════════════ -->
+  <section class="screen" id="screen-aluno">
+    <div class="aluno-wrap">
+
+      <header class="aluno-header">
+        <div class="ah-info">
+          <p class="ah-greeting">Bom dia,</p>
+          <h2 class="ah-name" id="aluno-nome-display">—</h2>
+          <p class="ah-turma">Turma 3A · Ensino Médio</p>
+        </div>
+        <div class="ah-avatar" id="aluno-avatar-display">—</div>
+      </header>
+
+      <div class="prazo-bar">
+        <div class="pb-left">
+          <span class="pb-eyebrow">Pedidos encerram às</span>
+          <span class="pb-time">07:50</span>
+        </div>
+        <div class="pb-right">
+          <span class="pb-dot"></span>
+          <span class="pb-remaining">23 min restantes</span>
+        </div>
+      </div>
+
+      <!-- Meal Selection -->
+      <div id="aluno-order-section">
+        <p class="section-label">Selecione suas refeições de hoje</p>
+        <div class="meals-grid">
+          <div class="meal-card" id="meal-recreio" data-meal="recreio">
+            <div class="mc-icon">🥐</div>
+            <div class="mc-body">
+              <h3 class="mc-name">1º Recreio</h3>
+              <p class="mc-time">8:40 – 9:00</p>
+              <p class="mc-dur">20 minutos</p>
+            </div>
+            <div class="mc-check" id="check-recreio"></div>
+          </div>
+          <div class="meal-card" id="meal-almoco" data-meal="almoco">
+            <div class="mc-icon">🍽️</div>
+            <div class="mc-body">
+              <h3 class="mc-name">Almoço</h3>
+              <p class="mc-time">11:30 – 12:20</p>
+              <p class="mc-dur">50 minutos</p>
+            </div>
+            <div class="mc-check" id="check-almoco"></div>
+          </div>
+        </div>
+
+        <!-- Ambas as refeições -->
+        <button class="btn-ambas" id="btn-ambas">
+          <span class="ambas-icons">🥐 + 🍽️</span>
+          <span class="ambas-label">Selecionar Ambas as Refeições</span>
+          <span class="ambas-check hidden" id="ambas-check">✓</span>
+        </button>
+
+        <button class="btn-confirm" id="btn-confirm-order" disabled>
+          Selecione ao menos uma refeição
+        </button>
+      </div>
+
+      <!-- Confirmed State -->
+      <div class="confirmed-box hidden" id="aluno-confirmed">
+        <div class="cb-icon">✅</div>
+        <h3 class="cb-title">Pedido confirmado!</h3>
+        <p class="cb-sub">Sua merenda está reservada para hoje.</p>
+        <div class="cb-tags" id="confirmed-tags"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══ SCREEN: COORDENAÇÃO ══════════════════════════════ -->
+  <section class="screen" id="screen-coordenacao">
+    <div class="coord-wrap">
+
+      <div class="coord-top">
+        <div>
+          <h2 class="coord-title">Painel de Merenda</h2>
+          <p class="coord-date" id="coord-date"></p>
+        </div>
+        <button class="btn-excecao" id="btn-add-excecao">+ Adicionar Exceção</button>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-box">
+          <span class="sb-num green" id="stat-recreio">0</span>
+          <span class="sb-lbl">🥐 Recreio</span>
+        </div>
+        <div class="stat-box">
+          <span class="sb-num green" id="stat-almoco">0</span>
+          <span class="sb-lbl">🍽️ Almoço</span>
+        </div>
+        <div class="stat-box">
+          <span class="sb-num dark" id="stat-total">0</span>
+          <span class="sb-lbl">Com pedido</span>
+        </div>
+        <div class="stat-box">
+          <span class="sb-num gray" id="stat-sem">0</span>
+          <span class="sb-lbl">Sem pedido</span>
+        </div>
+      </div>
+
+      <div id="coord-list"></div>
+
+    </div>
+  </section>
+
+  <!-- ══ SCREEN: COZINHA ══════════════════════════════════ -->
+  <section class="screen" id="screen-cozinha">
+    <div class="cozinha-wrap">
+      <h2 class="cz-title">Pedidos de Hoje</h2>
+      <p class="cz-sub" id="cz-date"></p>
+      <div class="cz-cards">
+        <div class="cz-card">
+          <span class="cz-icon">🥐</span>
+          <div class="cz-num" id="cz-recreio">0</div>
+          <div class="cz-lbl">1º Recreio</div>
+          <div class="cz-time">8:40 – 9:00</div>
+        </div>
+        <div class="cz-card highlight">
+          <span class="cz-icon">🍽️</span>
+          <div class="cz-num" id="cz-almoco">0</div>
+          <div class="cz-lbl">Almoço</div>
+          <div class="cz-time">11:30 – 12:20</div>
+        </div>
+      </div>
+      <div class="cz-chips">
+        <span class="cz-chip">📅 <span id="cz-chip-date"></span></span>
+        <span class="cz-chip live"><span class="live-dot"></span> Atualizado em tempo real</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ SCREEN: RECONHECIMENTO FACIAL ════════════════════ -->
+  <section class="screen" id="screen-facial">
+    <div class="facial-wrap">
+
+      <div class="facial-header">
+        <h2 class="fh-title">Reconhecimento Facial</h2>
+        <p class="fh-sub">Confirme a identidade do aluno na retirada da merenda</p>
+      </div>
+
+      <div class="facial-main">
+
+        <!-- Botões de controle da câmera -->
+        <div class="cam-controls">
+          <button class="btn-cam btn-cam-on" id="btn-cam-on">
+            <span class="cam-btn-icon">📷</span>
+            Ligar Câmera
+          </button>
+          <button class="btn-cam btn-cam-off" id="btn-cam-off" disabled>
+            <span class="cam-btn-icon">⏹</span>
+            Desligar Câmera
+          </button>
+        </div>
+
+        <div class="cam-wrap" id="cam-wrap">
+          <video id="cam-video" autoplay muted playsinline></video>
+          <canvas id="cam-canvas"></canvas>
+          <div class="cam-overlay" id="cam-overlay">
+            <div class="cam-idle-icon">📷</div>
+            <p class="cam-msg" id="cam-msg">Pressione "Ligar Câmera" para iniciar</p>
+          </div>
+          <div class="cam-frame">
+            <div class="cf-tl"></div>
+            <div class="cf-tr"></div>
+            <div class="cf-bl"></div>
+            <div class="cf-br"></div>
+          </div>
+        </div>
+
+        <div class="facial-status" id="facial-status">
+          <div class="fs-dot gray" id="fs-dot"></div>
+          <span class="fs-text" id="fs-text">Câmera desligada</span>
+        </div>
+
+        <div class="id-result hidden" id="id-result">
+          <div class="ir-top">
+            <div class="ir-avatar" id="ir-avatar"></div>
+            <div class="ir-info">
+              <div class="ir-name" id="ir-name"></div>
+              <div class="ir-turma" id="ir-turma"></div>
+            </div>
+            <div class="ir-check">✓</div>
+          </div>
+          <div class="ir-meals" id="ir-meals"></div>
+          <button class="btn-next-scan" id="btn-next-scan">Escanear próximo aluno →</button>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ MODAL: ACESSO NEGADO ══════════════════════════════ -->
+  <div class="modal-backdrop hidden" id="modal-backdrop">
+    <div class="modal-box" id="modal-auth">
+      <div class="modal-icon">🔒</div>
+      <h3 class="modal-title">Acesso restrito</h3>
+      <p class="modal-sub">Você precisa fazer login para acessar esta área.</p>
+      <button class="modal-btn" id="modal-btn-login">Ir para o Login</button>
+    </div>
+  </div>
+
+  <!-- ══ TOAST ════════════════════════════════════════════ -->
+  <div class="toast hidden" id="toast"></div>
+
+  <script src="app.js"></script>
 </body>
 </html>
