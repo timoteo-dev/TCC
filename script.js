@@ -41,16 +41,16 @@ function formatDate() {
   return new Date().toLocaleDateString("pt-BR", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
 }
 
-/* ── NAVEGAÇÃO E CONTROLE DE ACESSO ──────────────────────── */
+/* ── NAVEGAÇÃO E CONTROLO DE ACESSO ──────────────────────── */
 let activeRole = "aluno";
 let facialActive = false;
 
 function goTo(name) {
-  // Desativa a câmera ao sair da aba facial
+  // Desativa a câmara ao sair da aba facial
   if (facialActive && name !== "facial") stopCamera();
 
-  // CONTROLE DE ACESSO ESTRITO
-  // Se tentar ir para aluno, coordenação ou cozinha, verifica se está logado E se é a tela permitida
+  // CONTROLO DE ACESSO ESTRITO
+  // Se tentar ir para aluno, coordenação ou cozinha, verifica se tem sessão iniciada E se é a tela permitida
   if (name === "aluno" || name === "coordenacao" || name === "cozinha") {
     if (!isLoggedIn || loggedInRole !== name) {
       $("modal-backdrop").classList.remove("hidden");
@@ -111,14 +111,14 @@ $("btn-login").addEventListener("click", () => {
   }
 
   if (activeRole === "aluno" && !inputTurma) {
-    $("login-error").textContent = "Por favor, selecione sua turma.";
+    $("login-error").textContent = "Por favor, selecione a sua turma.";
     $("login-error").classList.remove("hidden");
     return;
   }
 
   $("login-error").classList.add("hidden");
   isLoggedIn = true;
-  loggedInRole = activeRole; // Tranca o usuário na aba selecionada
+  loggedInRole = activeRole; // Tranca o utilizador na aba selecionada
 
   // Remove o bloqueio visual apenas da aba permitida
   $$(".nav-protected").forEach(tab => {
@@ -264,7 +264,7 @@ function renderCoord() {
   list.querySelectorAll("[data-action='senha']").forEach(btn => {
     btn.addEventListener("click", () => {
       const s = students.find(s => s.id === parseInt(btn.dataset.id));
-      showToast(`Senha de ${s.name} foi resetada`);
+      showToast(`Senha de ${s.name} foi redefinida`);
     });
   });
 }
@@ -329,12 +329,19 @@ function showOverlay(show, msg = "") {
 
 function stopCamera() {
   facialActive = false;
-  if (rafId)     { cancelAnimationFrame(rafId); rafId = null; }
-  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  
+  // Desliga todas as faixas (tracks) da câmara de forma segura
+  if (camStream) { 
+    camStream.getTracks().forEach(t => t.stop()); 
+    camStream = null; 
+  }
+  
+  VIDEO.srcObject = null; // Limpa o vídeo do elemento HTML
   CTX.clearRect(0, 0, CANVAS.width, CANVAS.height);
   
-  showOverlay(true, "Câmera pausada. Pressione 'Ligar Câmera' para iniciar.");
-  setStatus("gray", "Câmera desativada");
+  showOverlay(true, "Câmara pausada. Pressione 'Ligar Câmara' para iniciar.");
+  setStatus("gray", "Câmara desativada");
 
   $("btn-cam-on").disabled = false;
   $("btn-cam-off").disabled = true;
@@ -347,11 +354,14 @@ async function initFacial() {
   firstFaceAt = null;
 
   $("id-result").classList.add("hidden");
-  showOverlay(true, "Aguardando permissão...");
-  setStatus("gray", "Ligando a câmera...");
+  showOverlay(true, "A aguardar permissão e a ligar a câmara...");
+  setStatus("gray", "A iniciar...");
+  
+  // Desativa o botão de ligar para evitar cliques duplos que bloqueiam a câmara
+  $("btn-cam-on").disabled = true; 
 
   try {
-    // Tenta obter a câmera do usuário primeiro
+    // 1. Tenta aceder à câmara
     camStream = await navigator.mediaDevices.getUserMedia({
       video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" }
     });
@@ -360,37 +370,57 @@ async function initFacial() {
     await new Promise(res => { VIDEO.onloadedmetadata = res; });
     await VIDEO.play();
 
-    setStatus("gray", "Carregando Inteligência Artificial...");
+    setStatus("gray", "A carregar Inteligência Artificial...");
     
-    // O modelo tf e blazeface agora vêm direto do HTML
+    // 2. Tenta carregar o modelo de reconhecimento (BlazeFace)
     if (!tfModel) {
       if (typeof blazeface === "undefined") {
-          throw new Error("Scripts da IA não encontrados. Verifique o HTML.");
+        throw new Error("A biblioteca BlazeFace não foi encontrada. Verifique sua conexão e recarregue a página.");
       }
-      tfModel = await blazeface.load();
+      // Aproveita o modelo pré-carregado no início da página, se disponível
+      tfModel = window._blazefaceModelPromise
+        ? await window._blazefaceModelPromise
+        : await blazeface.load();
+
+      if (!tfModel) {
+        throw new Error("Falha ao carregar o modelo de IA. Recarregue a página e tente novamente.");
+      }
     }
 
+    // Se chegou até aqui, tudo correu bem! Remove a tela escura e liberta o botão de desligar.
     showOverlay(false);
-    setStatus("gray", "Posicione o rosto do aluno na câmera");
-    
-    $("btn-cam-on").disabled = true;
+    setStatus("gray", "Posicione o rosto do aluno na câmara");
     $("btn-cam-off").disabled = false;
 
     startDetectionLoop();
 
   } catch (err) {
     console.error(err);
-    let msg = "Erro ao iniciar câmera ou IA.";
     
+    // CORREÇÃO: Se deu erro na IA, força o desligamento da câmara fisicamente
+    // para que não fique a rodar invisível atrás da tela preta de erro.
+    if (camStream) {
+      camStream.getTracks().forEach(t => t.stop());
+      camStream = null;
+    }
+    VIDEO.srcObject = null;
+
+    // Define a mensagem exata do erro
+    let msg = "Erro ao iniciar a câmara ou a IA.";
     if (err.name === "NotAllowedError") {
-      msg = "Permissão negada. Permita o uso da câmera no topo do navegador.";
+      msg = "Permissão negada. Autorize o uso da câmara no topo do navegador.";
     } else if (location.protocol === 'file:') {
-      msg = "Navegadores bloqueiam IA no protocolo file:///. Use uma extensão como 'Live Server'.";
+      msg = "Os navegadores bloqueiam a IA ao abrir o ficheiro diretamente. Utilize a extensão 'Live Server' no VS Code.";
+    } else {
+      msg = err.message;
     }
 
+    // Aplica o estado de erro
     showOverlay(true, msg);
-    setStatus("gray", "Câmera indisponível");
+    setStatus("gray", "Câmara indisponível");
     facialActive = false;
+    
+    // Devolve o controlo para o utilizador tentar novamente
     $("btn-cam-on").disabled = false;
     $("btn-cam-off").disabled = true;
   }
@@ -428,7 +458,7 @@ function startDetectionLoop() {
 
         if (!firstFaceAt) {
           firstFaceAt = Date.now();
-          setStatus("yellow", "Identificando aluno...");
+          setStatus("yellow", "A identificar aluno...");
         }
 
         const elapsed = Date.now() - firstFaceAt;
@@ -438,7 +468,7 @@ function startDetectionLoop() {
         if (elapsed > 2600 && !scanDone) {
           scanDone = true;
           drawSuccess(x1, y1, w, h);
-          // Simula identificação do primeiro aluno
+          // Simula a identificação do primeiro aluno
           setTimeout(() => showIdentified(students[0]), 200);
           return;
         }
@@ -446,7 +476,7 @@ function startDetectionLoop() {
       } else {
         firstFaceAt = null;
         CTX.clearRect(0, 0, CANVAS.width, CANVAS.height);
-        setStatus("gray", "Posicione o rosto do aluno na câmera");
+        setStatus("gray", "Posicione o rosto do aluno na câmara");
       }
     } catch (_) { /* frame skip */ }
 
@@ -520,7 +550,7 @@ $("btn-next-scan").addEventListener("click", () => {
   CTX.clearRect(0, 0, CANVAS.width, CANVAS.height);
   scanDone    = false;
   firstFaceAt = null;
-  setStatus("gray", "Posicione o rosto do aluno na câmera");
+  setStatus("gray", "Posicione o rosto do aluno na câmara");
   startDetectionLoop();
 });
 
