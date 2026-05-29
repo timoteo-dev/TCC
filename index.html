@@ -9,9 +9,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="merenda.css" />
   
-  <!-- TF.js 2.8.6 + BlazeFace 0.0.7 são versões compatíveis entre si -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.8.6/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     // Pré-carrega o modelo BlazeFace assim que a página abre,
     // para estar pronto quando o utilizador clicar em "Ligar Câmera".
@@ -91,6 +91,14 @@
           </div>
 
           <button class="btn-enter" id="btn-login">Entrar no sistema →</button>
+
+          <div style="margin-top: 24px; text-align: center; border-top: 1px solid var(--border); padding-top: 20px;">
+            <p style="font-size: 14px; color: var(--muted); margin-bottom: 12px;">Ainda não tem cadastro?</p>
+            <button type="button" onclick="document.getElementById('modal-iframe-cadastro').classList.remove('hidden')" style="width: 100%; padding: 14px; background: transparent; border: 2px solid var(--primary); color: var(--primary); font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; border-radius: 12px; cursor: pointer; transition: all 0.2s;">
+              Fazer Cadastro Primeiro
+            </button>
+          </div>
+
         </div>
       </div>
     </div>
@@ -291,6 +299,37 @@
   </div>
 
   <div class="toast hidden" id="toast"></div>
+
+  <style>
+    .modal-iframe-wrapper {
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      width: 100vw; 
+      height: 100vh;
+      background: rgba(0,0,0,0.6); 
+      z-index: 9999;
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+    }
+    .modal-iframe-wrapper.hidden {
+      display: none !important;
+    }
+  </style>
+
+  <div id="modal-iframe-cadastro" class="modal-iframe-wrapper hidden">
+    <div style="background: var(--bg); width: 95%; max-width: 1100px; height: 90vh; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+      
+      <div style="padding: 16px 24px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-family: 'Fraunces', serif; font-size: 20px; color: var(--text); margin: 0;">Realizar Cadastro</h3>
+        <button onclick="document.getElementById('modal-iframe-cadastro').classList.add('hidden')" style="background: none; border: none; font-size: 28px; cursor: pointer; color: var(--muted); line-height: 1;">&times;</button>
+      </div>
+      
+      <iframe src="tela.html" style="width: 100%; height: 100%; border: none;"></iframe>
+    </div>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>
