@@ -6,6 +6,35 @@
 
 "use strict";
 
+const SUPABASE_URL = "https://cjuqkecvlwryjtgwxkjc.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqdXFrZWN2bHdyeWp0Z3d4a2pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MjYwMjksImV4cCI6MjA5NTEwMjAyOX0.hUDvHjX8EovKETJdREXxuXvL7EyE1wLXTIR1zXcV04w"; 
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+async function carregarTurmasLogin() {
+  const { data, error } = await db
+    .from("turmas")
+    .select("id, nome")
+    .eq("ativo", true)
+    .order("nome");
+
+  if (error) {
+    console.error("Erro ao carregar turmas no login:", error);
+    return;
+  }
+
+  const selectTurma = $("input-turma");
+  if (selectTurma) {
+    const options = data.map(t => `<option value="${t.id}">${t.nome}</option>`).join("");
+    selectTurma.innerHTML = `<option value="">Selecione sua turma...</option>` + options;
+  }
+}
+
+// Chame a função automaticamente quando a página carregar
+window.addEventListener('DOMContentLoaded', () => {
+  carregarTurmasLogin();
+});
+
 /* ── DADOS ───────────────────────────────────────────────── */
 const STUDENTS = [
   { id:1, name:"Ana Silva",     turma:"3A", recreio:true,  almoco:true,  initials:"AS" },

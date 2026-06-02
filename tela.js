@@ -225,12 +225,18 @@ $("btn-salvar-sys").addEventListener("click", async () => {
 });
 
 async function carregarUsuariosSistema() {
-  const { data, error } = await db
-    .from("usuarios_sistema")
-    .select("id, nome, perfil, ativo")
-    .eq("ativo", true)
-    .order("perfil");
-
+  // Localize esta parte no seu tela.js e adicione a linha do 'ativo'
+const { data, error } = await db
+  .from("alunos")
+  .insert([
+    { 
+      nome, 
+      turma_id: turmaId, 
+      senha_hash: senha, 
+      temp_senha: senha,
+      ativo: true // <─── ADICIONE ESTA LINHA AQUI
+    }
+  ]);
   const el = $("sys-lista");
   if (error || !data?.length) {
     el.innerHTML = `<p class="empty-hint">Nenhum usuário cadastrado.</p>`;
