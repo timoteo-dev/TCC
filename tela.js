@@ -2,11 +2,10 @@
 
 /* ══════════════════════════════════════════════════════
    CONFIGURAÇÃO SUPABASE
-   Substitua as duas variáveis abaixo com os dados do
-   seu projeto: Settings → API no painel do Supabase.
    ══════════════════════════════════════════════════════ */
 const SUPABASE_URL = "https://cjuqkecvlwryjtgwxkjc.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqdXFrZWN2bHdyeWp0Z3d4a2pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MjYwMjksImV4cCI6MjA5NTEwMjAyOX0.hUDvHjX8EovKETJdREXxuXvL7EyE1wLXTIR1zXcV04w";
+// const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqdXFrZWN2bHdyeWp0Z3d4a2pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MjYwMjksImV4cCI6MjA5NTEwMjAyOX0.hUDvHjX8EovKETJdREXxuXvL7EyE1wLXTIR1zXcV04w";
+const SUPABASE_KEY= 'sb_publishable_7HGR3th3tfppiHuf_S9Afg_lnlSKXFK'
 
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -69,7 +68,6 @@ async function carregarTurmas() {
   const opts = data.map(t => `<option value="${t.id}">${t.nome}</option>`).join("");
   $("aluno-turma").innerHTML = `<option value="">Selecione a turma...</option>` + opts;
 
-  // Filtro da lista
   const filterOpts = data.map(t => `<option value="${t.id}">${t.nome}</option>`).join("");
   $("filter-turma").innerHTML = `<option value="">Todas as turmas</option>` + filterOpts;
 }
@@ -101,7 +99,6 @@ $("btn-salvar-aluno").addEventListener("click", async () => {
   $("aluno-turma").classList.remove("error");
   $("aluno-senha").classList.remove("error");
 
-  // Validação
   if (!nome || !turmaId || !senha) {
     errEl.textContent = "Preencha todos os campos antes de salvar.";
     errEl.classList.remove("hidden");
@@ -119,11 +116,13 @@ $("btn-salvar-aluno").addEventListener("click", async () => {
 
   setLoading("btn-aluno-txt", "btn-aluno-loader", "btn-salvar-aluno", true);
 
-  // AVISO: Em produção, a senha deve ser enviada via backend Node.js
-  // e armazenada como hash bcrypt. Nunca salve senha pura em produção.
+
+  console.log(turmaId)
+
+  // ✅ CORRIGIDO: usa 'senha' (nome correto da coluna) e 'ativo: true'
   const { data, error } = await db
     .from("alunos")
-    .insert({ nome, turma_id: parseInt(turmaId), senha_hash: senha, temp_senha: true })
+    .insert({ nome, turma_id: parseInt(turmaId), senha: senha, ativo: true })
     .select("id, nome, turma_id")
     .single();
 
@@ -132,20 +131,18 @@ $("btn-salvar-aluno").addEventListener("click", async () => {
   if (error) {
     errEl.textContent = "Erro ao salvar. Verifique se o aluno já está cadastrado.";
     errEl.classList.remove("hidden");
+    console.log(error)
     return;
   }
 
-  // Busca nome da turma
   const turmaEl   = $("aluno-turma");
   const turmaNome = turmaEl.options[turmaEl.selectedIndex].text;
 
-  // Limpa formulário
   $("aluno-nome").value  = "";
   $("aluno-senha").value = "";
   $("aluno-turma").value = "";
   $("aluno-nome").focus();
 
-  // Atualiza últimos
   ultimosCadastrados.unshift({ nome, turmaNome });
   if (ultimosCadastrados.length > 6) ultimosCadastrados.pop();
   renderUltimos();
@@ -224,19 +221,13 @@ $("btn-salvar-sys").addEventListener("click", async () => {
   toast(`${nome} cadastrado como ${perfilAtivo}!`);
 });
 
+// ✅ CORRIGIDO: função restaurada para buscar usuarios_sistema corretamente
 async function carregarUsuariosSistema() {
-  // Localize esta parte no seu tela.js e adicione a linha do 'ativo'
-const { data, error } = await db
-  .from("alunos")
-  .insert([
-    { 
-      nome, 
-      turma_id: turmaId, 
-      senha_hash: senha, 
-      temp_senha: senha,
-      ativo: true // <─── ADICIONE ESTA LINHA AQUI
-    }
-  ]);
+  const { data, error } = await db
+    .from("usuarios_sistema")
+    .select("id, nome, perfil")
+    .order("nome");
+
   const el = $("sys-lista");
   if (error || !data?.length) {
     el.innerHTML = `<p class="empty-hint">Nenhum usuário cadastrado.</p>`;
@@ -302,7 +293,6 @@ function renderTabela(lista) {
     </tr>
   `).join("");
 
-  // Delegação de eventos — botões remover
   tbody.querySelectorAll(".table-action").forEach(btn => {
     btn.addEventListener("click", () => {
       alunoParaDeletar = { id: parseInt(btn.dataset.id), nome: btn.dataset.nome };
@@ -312,7 +302,6 @@ function renderTabela(lista) {
   });
 }
 
-// Filtros em tempo real
 $("search-aluno").addEventListener("input", filtrar);
 $("filter-turma").addEventListener("change", filtrar);
 
@@ -321,15 +310,14 @@ function filtrar() {
   const turmaId = $("filter-turma").value;
 
   const filtrado = todosAlunos.filter(a => {
-    const nomeBate   = a.nome.toLowerCase().includes(busca);
-    const turmaBate  = !turmaId || String(a.turmas?.id) === turmaId;
+    const nomeBate  = a.nome.toLowerCase().includes(busca);
+    const turmaBate = !turmaId || String(a.turmas?.id) === turmaId;
     return nomeBate && turmaBate;
   });
 
   renderTabela(filtrado);
 }
 
-/* ── Modal confirmar exclusão ── */
 $("modal-cancel").addEventListener("click", () => {
   $("modal-del").classList.add("hidden");
   alunoParaDeletar = null;
