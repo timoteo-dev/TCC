@@ -1,175 +1,285 @@
-const video = document.getElementById("videoEscola");
-const container = document.getElementById("containerVideo");
-const painelStatus = document.getElementById("statusCatraca");
-const corpoTabela = document.getElementById("corpoTabela");
-const btnLigar = document.getElementById("btnLigar");
-const btnReset = document.getElementById("btnReset");
-const btnExportar = document.getElementById("btnExportar");
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Botões de escolha de refeição
-const btnCafe = document.getElementById("btnCafe");
-const btnAlmoco = document.getElementById("btnAlmoco");
-const btnAmbos = document.getElementById("btnAmbos");
+const ordemPassos = ["escolha", "identidade", "pronto"];
 
-let comparadorDeRostos; 
-let catracaLiberada = true; 
-const alunosQueJaComeram = new Set(); 
-const LISTA_ALUNOS = ["Kaio"]; 
+const video = document.getElementById("video");
+const canvasVideo = document.getElementById("canvasVideo");
+const anel = document.getElementById("anel");
+const statusReconhecimento = document.getElementById("statusReconhecimento");
 
-// Variável que guarda o que o aluno escolheu
-let refeicaoSelecionada = "";
+const tituloPin = document.getElementById("tituloPin");
+const subtituloPin = document.getElementById("subtituloPin");
+const visorPin = document.getElementById("visorPin");
+const teclado = document.getElementById("teclado");
 
-// Função para marcar o botão clicado
-function selecionarOpcao(escolha, botaoClicado) {
-    refeicaoSelecionada = escolha;
-    
-    // Tira a marcação de todos
-    btnCafe.classList.remove("ativo");
-    btnAlmoco.classList.remove("ativo");
-    btnAmbos.classList.remove("ativo");
-    
-    // Marca só o que foi clicado
-    botaoClicado.classList.add("ativo");
-    painelStatus.innerText = "OPÇÃO SELECIONADA! OLHE PARA A CÂMERA.";
-    painelStatus.className = "status alerta";
+let tipoRefeicao = "";
+let stream = null;
+let cameraRodando = false;
+let travadoProcessando = false;
+let intervaloDeteccao = null;
+
+let modoPin = "matricula"; // "matricula" | "pin"
+let bufferMatricula = "";
+let bufferPin = "";
+
+// ---------- Navegação entre telas ----------
+
+function mostrarTela(nome) {
+  document.querySelectorAll(".tela").forEach((tela) => {
+    tela.hidden = tela.dataset.tela !== nome;
+  });
 }
 
-btnCafe.addEventListener("click", () => selecionarOpcao("Café", btnCafe));
-btnAlmoco.addEventListener("click", () => selecionarOpcao("Almoço", btnAlmoco));
-btnAmbos.addEventListener("click", () => selecionarOpcao("Café e Almoço", btnAmbos));
-
-function tocarBipe(tipo) {
-    const contexto = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = contexto.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(tipo === 'erro' ? 220 : 880, contexto.currentTime);
-    osc.connect(contexto.destination);
-    osc.start();
-    osc.stop(contexto.currentTime + 0.2);
+function atualizarTrilha(passoAtivo) {
+  const idxAtivo = ordemPassos.indexOf(passoAtivo);
+  document.querySelectorAll(".passo").forEach((passo) => {
+    const idx = ordemPassos.indexOf(passo.dataset.passo);
+    passo.classList.remove("ativo", "concluido");
+    if (idx < idxAtivo) passo.classList.add("concluido");
+    else if (idx === idxAtivo) passo.classList.add("ativo");
+  });
 }
 
-async function iniciarIA() {
-    const URL_MODELOS = 'https://vladmandic.github.io/face-api/model/';
-    await faceapi.nets.tinyFaceDetector.loadFromUri(URL_MODELOS);
-    await faceapi.nets.faceLandmark68Net.loadFromUri(URL_MODELOS);
-    await faceapi.nets.faceRecognitionNet.loadFromUri(URL_MODELOS);
-
-    const descritores = await Promise.all(LISTA_ALUNOS.map(async nome => {
-        const img = document.getElementById(nome);
-        const detec = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-        return new faceapi.LabeledFaceDescriptors(nome, [detec.descriptor]);
-    }));
-
-    comparadorDeRostos = new faceapi.FaceMatcher(descritores, 0.45);
-    painelStatus.innerText = "SISTEMA PRONTO. ESCOLHA UMA OPÇÃO.";
+function reiniciar() {
+  tipoRefeicao = "";
+  pararCamera();
+  modoPin = "matricula";
+  bufferMatricula = "";
+  bufferPin = "";
+  mostrarTela("escolha");
+  atualizarTrilha("escolha");
 }
 
-iniciarIA();
+// ---------- Escolha da refeição ----------
 
-btnLigar.addEventListener("click", async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+document.querySelectorAll(".opcao").forEach((botao) => {
+  botao.addEventListener("click", () => {
+    tipoRefeicao = botao.dataset.tipo;
+    atualizarTrilha("identidade");
+    mostrarTela("identidade");
+    iniciarCamera();
+  });
+});
+
+// ---------- Reconhecimento facial ----------
+
+const modelosProntos = (async () => {
+  await faceapi.nets.tinyFaceDetector.loadFromUri(URL_MODELOS_FACE);
+  await faceapi.nets.faceLandmark68Net.loadFromUri(URL_MODELOS_FACE);
+  await faceapi.nets.faceRecognitionNet.loadFromUri(URL_MODELOS_FACE);
+})();
+
+async function iniciarCamera() {
+  anel.className = "anel";
+  statusReconhecimento.textContent = "Preparando câmera…";
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
     video.srcObject = stream;
-});
+  } catch (erro) {
+    statusReconhecimento.textContent = "Não consegui acessar a câmera. Use o PIN abaixo.";
+    return;
+  }
 
-btnReset.addEventListener("click", () => {
-    alunosQueJaComeram.clear();
-    corpoTabela.innerHTML = "";
-    refeicaoSelecionada = "";
-    btnCafe.classList.remove("ativo");
-    btnAlmoco.classList.remove("ativo");
-    btnAmbos.classList.remove("ativo");
-    alert("Lista zerada para o próximo turno!");
-});
+  await modelosProntos;
+  if (!stream) return; // aluno já pode ter trocado para o PIN nesse meio tempo
 
-// Atualizei a exportação para incluir a coluna de Refeição
-btnExportar.addEventListener("click", () => {
-    if (alunosQueJaComeram.size === 0) return alert("Nenhum aluno registrou refeição.");
-    let csv = "Nome,Refeicao,Horario,Status\n";
-    const linhas = corpoTabela.querySelectorAll("tr");
-    linhas.forEach(linha => {
-        const col = linha.querySelectorAll("td");
-        csv += `${col[0].innerText},${col[1].innerText},${col[2].innerText},${col[3].innerText}\n`;
+  statusReconhecimento.textContent = "Olhe para a câmera…";
+  anel.classList.add("buscando");
+  cameraRodando = true;
+  video.onplay = iniciarDeteccao;
+}
+
+function pararCamera() {
+  cameraRodando = false;
+  clearInterval(intervaloDeteccao);
+  if (stream) {
+    stream.getTracks().forEach((faixa) => faixa.stop());
+    stream = null;
+  }
+}
+
+function iniciarDeteccao() {
+  const displaySize = { width: video.videoWidth, height: video.videoHeight };
+  faceapi.matchDimensions(canvasVideo, displaySize);
+
+  intervaloDeteccao = setInterval(async () => {
+    if (!cameraRodando || travadoProcessando) return;
+
+    const deteccao = await faceapi
+      .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+
+    const ctx = canvasVideo.getContext("2d");
+    ctx.clearRect(0, 0, canvasVideo.width, canvasVideo.height);
+    if (!deteccao) return;
+
+    travadoProcessando = true;
+    statusReconhecimento.textContent = "Confirmando identidade…";
+
+    const descritor = Array.from(deteccao.descriptor);
+    const { data, error } = await supabase.rpc("processar_pedido_facial", {
+      p_descriptor: descritor,
+      p_tipo: tipoRefeicao,
+      p_limiar: LIMIAR_RECONHECIMENTO,
     });
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    link.href = window.URL.createObjectURL(blob);
-    link.download = `Relatorio_Merenda_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.csv`;
-    link.click();
-});
 
-video.addEventListener("play", () => {
-    // 1. Cria o canvas
-    const canvas = faceapi.createCanvasFromMedia(video);
-    container.append(canvas);
-
-    // 2. Usa videoWidth/Height em vez de width/height para garantir que não seja 0
-    const displaySize = { 
-        width: video.videoWidth || video.width, 
-        height: video.videoHeight || video.height 
-    };
-
-    // Só prossegue se as dimensões forem válidas
-    if (displaySize.width === 0 || displaySize.height === 0) {
-        console.warn("Aguardando dimensões do vídeo...");
-        return; 
+    if (error) {
+      mostrarErroTecnico(error);
+      return;
     }
 
-    faceapi.matchDimensions(canvas, displaySize);
+    const resultado = data && data[0];
 
-    setInterval(async () => {
-        const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
-            .withFaceLandmarks()
-            .withFaceDescriptors();
+    if (!resultado || resultado.status === "nao_reconhecido") {
+      anel.className = "anel erro";
+      statusReconhecimento.textContent = "Não te reconheci. Tente de novo ou use o PIN.";
+      setTimeout(() => {
+        travadoProcessando = false;
+        anel.className = "anel buscando";
+        statusReconhecimento.textContent = "Olhe para a câmera…";
+      }, 1300);
+      return;
+    }
 
-        // Verifica se há dimensões válidas antes de redimensionar
-        if (displaySize.width > 0 && displaySize.height > 0) {
-            const resized = faceapi.resizeResults(detections, displaySize);
-            canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+    anel.className = "anel sucesso";
+    pararCamera();
+    tratarResultado(resultado);
+  }, 700);
+}
 
-            resized.forEach(det => {
-                const result = comparadorDeRostos.findBestMatch(det.descriptor);
-                new faceapi.draw.DrawBox(det.detection.box, { label: result.toString() }).draw(canvas);
+// ---------- PIN (alternativa à câmera) ----------
 
-                if (result.label !== "unknown" && catracaLiberada) {
-                    if (refeicaoSelecionada === "") {
-                        painelStatus.className = "status bloqueado";
-                        painelStatus.innerText = "CLIQUE NA REFEIÇÃO PRIMEIRO!";
-                        return; 
-                    }
+function montarTeclado() {
+  const teclas = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "apagar", "0", "confirmar"];
+  teclado.innerHTML = "";
+  teclas.forEach((tecla) => {
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className =
+      "tecla" + (tecla === "apagar" ? " especial" : "") + (tecla === "confirmar" ? " confirmar" : "");
+    botao.textContent = tecla === "apagar" ? "⌫" : tecla === "confirmar" ? "OK" : tecla;
+    botao.addEventListener("click", () => tratarTecla(tecla));
+    teclado.appendChild(botao);
+  });
+}
 
-                    if (alunosQueJaComeram.has(result.label)) {
-                        painelStatus.className = "status alerta";
-                        painelStatus.innerText = `REFEIÇÃO JÁ REGISTRADA: ${result.label.toUpperCase()}`;
-                        tocarBipe('erro');
-                    } else {
-                        catracaLiberada = false;
-                        alunosQueJaComeram.add(result.label);
-                        
-                        painelStatus.className = "status liberado";
-                        painelStatus.innerText = `CONFIRMADO: ${result.label.toUpperCase()} (${refeicaoSelecionada})`;
-                        tocarBipe('sucesso');
-                        
-                        const row = `<tr>
-                            <td><strong>${result.label}</strong></td>
-                            <td>${refeicaoSelecionada}</td>
-                            <td>${new Date().toLocaleTimeString()}</td>
-                            <td><span class="tag-sucesso">CONFIRMADO</span></td>
-                        </tr>`;
-                        corpoTabela.innerHTML = row + corpoTabela.innerHTML;
+function atualizarVisor() {
+  visorPin.textContent = modoPin === "matricula" ? bufferMatricula : "•".repeat(bufferPin.length);
+}
 
-                        refeicaoSelecionada = "";
-                        btnCafe.classList.remove("ativo");
-                        btnAlmoco.classList.remove("ativo");
-                        btnAmbos.classList.remove("ativo");
+function tratarTecla(tecla) {
+  if (tecla === "apagar") {
+    if (modoPin === "matricula") bufferMatricula = bufferMatricula.slice(0, -1);
+    else bufferPin = bufferPin.slice(0, -1);
+  } else if (tecla === "confirmar") {
+    if (modoPin === "matricula") {
+      if (bufferMatricula.length === 0) return;
+      modoPin = "pin";
+      bufferPin = "";
+      tituloPin.textContent = "Digite seu PIN";
+      subtituloPin.textContent = "De 4 a 6 dígitos";
+    } else {
+      if (bufferPin.length < 4) return;
+      confirmarPin();
+      return;
+    }
+  } else {
+    if (modoPin === "matricula" && bufferMatricula.length < 10) bufferMatricula += tecla;
+    if (modoPin === "pin" && bufferPin.length < 6) bufferPin += tecla;
+  }
+  atualizarVisor();
+}
 
-                        setTimeout(() => {
-                            catracaLiberada = true;
-                            painelStatus.className = "status bloqueado";
-                            painelStatus.innerText = "PRÓXIMO: ESCOLHA A REFEIÇÃO";
-                        }, 4000);
-                    }
-                }
-            });
-        }
-    }, 100);
+async function confirmarPin() {
+  teclado.querySelectorAll(".tecla").forEach((botao) => (botao.disabled = true));
+  subtituloPin.textContent = "Confirmando…";
+
+  const { data, error } = await supabase.rpc("processar_pedido_pin", {
+    p_matricula: bufferMatricula,
+    p_pin: bufferPin,
+    p_tipo: tipoRefeicao,
+  });
+
+  teclado.querySelectorAll(".tecla").forEach((botao) => (botao.disabled = false));
+
+  if (error) {
+    mostrarErroTecnico(error);
+    return;
+  }
+
+  const resultado = data && data[0];
+
+  if (!resultado || resultado.status === "nao_encontrado") {
+    subtituloPin.textContent = "Matrícula ou PIN incorretos. Tente de novo.";
+    modoPin = "matricula";
+    bufferMatricula = "";
+    bufferPin = "";
+    tituloPin.textContent = "Digite sua matrícula";
+    atualizarVisor();
+    return;
+  }
+
+  tratarResultado(resultado);
+}
+
+document.getElementById("btnUsarPin").addEventListener("click", () => {
+  pararCamera();
+  modoPin = "matricula";
+  bufferMatricula = "";
+  bufferPin = "";
+  tituloPin.textContent = "Digite sua matrícula";
+  subtituloPin.textContent = "Use o teclado abaixo";
+  atualizarVisor();
+  mostrarTela("pin");
 });
+
+document.getElementById("btnUsarCamera").addEventListener("click", () => {
+  mostrarTela("identidade");
+  iniciarCamera();
+});
+
+// ---------- Resultado final ----------
+
+function tratarResultado(resultado) {
+  mostrarTela("resultado");
+  atualizarTrilha("pronto");
+
+  const el = document.getElementById("resultadoConteudo");
+
+  if (resultado.status === "confirmado") {
+    el.className = "resultado confirmado";
+    el.innerHTML = `
+      <div class="resultado-icone">🎉</div>
+      <p class="resultado-titulo">Prontinho, ${resultado.nome}!</p>
+      <p class="resultado-subtitulo">Sua refeição foi registrada. Bom apetite!</p>`;
+  } else if (resultado.status === "ja_registrado") {
+    el.className = "resultado aviso";
+    el.innerHTML = `
+      <div class="resultado-icone">🤔</div>
+      <p class="resultado-titulo">Oi, ${resultado.nome}!</p>
+      <p class="resultado-subtitulo">Você já registrou sua refeição hoje.</p>`;
+  }
+
+  setTimeout(reiniciar, 4500);
+}
+
+function mostrarErroTecnico(error) {
+  console.error(error);
+  travadoProcessando = false;
+  pararCamera();
+  mostrarTela("resultado");
+  const el = document.getElementById("resultadoConteudo");
+  el.className = "resultado erro";
+  el.innerHTML = `
+    <div class="resultado-icone">⚠️</div>
+    <p class="resultado-titulo">Ops, algo travou</p>
+    <p class="resultado-subtitulo">Chame a coordenação, por favor.</p>`;
+  setTimeout(reiniciar, 4500);
+}
+
+// ---------- Inicialização ----------
+
+montarTeclado();
+atualizarTrilha("escolha");

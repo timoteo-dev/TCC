@@ -1,63 +1,97 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Merenda - IA</title>
-    <link rel="stylesheet" href="merenda.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Totem da Merenda</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilo.css">
 </head>
 <body>
-    
-    <div class="painel-principal">
-        <header>
-            <h1>Sistema de Merenda Escolar</h1>
-            <p>Reconhecimento Facial Integrado</p>
-        </header>
 
-        <div id="statusCatraca" class="status bloqueado">
-            INICIALIZANDO IA...
-        </div>
+<div class="totem">
 
-        <div class="painel-escolha">
-            <h3>O que você vai comer hoje?</h3>
-            <div class="botoes-refeicao">
-                <button id="btnCafe" class="btn-opcao">☕ Café</button>
-                <button id="btnAlmoco" class="btn-opcao">🍛 Almoço</button>
-                <button id="btnAmbos" class="btn-opcao">🍽️ Os Dois</button>
-            </div>
-        </div>
-
-        <div class="controles">
-            <button id="btnLigar" class="btn-primario">Ligar Câmera</button>
-            <button id="btnReset" class="btn-secundario">Zerar Lista</button>
-            <button id="btnExportar" class="btn-terciario">Baixar Relatório</button>
-        </div>
-        
-        <div id="containerVideo">
-            <video id="videoEscola" autoplay muted></video>
-        </div>
-
-        <div class="historico-container">
-            <h3>Alunos Confirmados</h3>
-            <table id="tabelaHistorico">
-                <thead>
-                    <tr>
-                        <th>Nome</th>
-                        <th>Refeição</th> <th>Horário</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody id="corpoTabela">
-                </tbody>
-            </table>
-        </div>
-
-        <div id="fotosBiblioteca" style="display: none;">
-            <img id="Kaio" src="aluno.jpg">
-        </div>
+  <header class="trilha" id="trilha" aria-label="Etapas do pedido">
+    <div class="passo" data-passo="escolha">
+      <span class="passo-num">1</span>
+      <span class="passo-rotulo">Escolher refeição</span>
     </div>
+    <div class="passo-linha"></div>
+    <div class="passo" data-passo="identidade">
+      <span class="passo-num">2</span>
+      <span class="passo-rotulo">Confirmar identidade</span>
+    </div>
+    <div class="passo-linha"></div>
+    <div class="passo" data-passo="pronto">
+      <span class="passo-num">3</span>
+      <span class="passo-rotulo">Pronto</span>
+    </div>
+  </header>
 
-    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
-    <script src="script.js"></script>
+  <main class="palco" id="palco">
+
+    <!-- TELA 1: escolha da refeição -->
+    <section class="tela" data-tela="escolha">
+      <p class="ola">Bom te ver por aqui</p>
+      <h1>O que você vai comer hoje?</h1>
+      <div class="opcoes">
+        <button class="opcao" data-tipo="cafe">
+          <span class="opcao-icone">☕</span>
+          <span class="opcao-texto">Café da manhã</span>
+        </button>
+        <button class="opcao" data-tipo="almoco">
+          <span class="opcao-icone">🍛</span>
+          <span class="opcao-texto">Almoço</span>
+        </button>
+        <button class="opcao" data-tipo="ambos">
+          <span class="opcao-icone">🍱</span>
+          <span class="opcao-texto">Café e almoço</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- TELA 2: reconhecimento facial -->
+    <section class="tela" data-tela="identidade" hidden>
+      <h1>Olhe para a câmera</h1>
+      <p class="subtitulo" id="statusReconhecimento">Carregando reconhecimento…</p>
+
+      <div class="camera-quadro">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="canvasVideo"></canvas>
+        <div class="anel" id="anel"></div>
+      </div>
+
+      <button class="link-alternativo" id="btnUsarPin" type="button">Prefiro digitar meu PIN</button>
+    </section>
+
+    <!-- TELA 3: PIN (fallback) -->
+    <section class="tela" data-tela="pin" hidden>
+      <h1 id="tituloPin">Digite sua matrícula</h1>
+      <p class="subtitulo" id="subtituloPin">Use o teclado abaixo</p>
+
+      <div class="campo-pin">
+        <span id="visorPin"></span>
+      </div>
+
+      <div class="teclado" id="teclado"></div>
+
+      <button class="link-alternativo" id="btnUsarCamera" type="button">Usar reconhecimento facial</button>
+    </section>
+
+    <!-- TELA 4: resultado -->
+    <section class="tela" data-tela="resultado" hidden>
+      <div class="resultado" id="resultadoConteudo"></div>
+    </section>
+
+  </main>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
