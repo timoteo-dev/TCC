@@ -315,6 +315,8 @@ function syncCozinha() {
   const { nRecreo, nAlmoco } = calcStats();
   if ($("cz-recreio")) $("cz-recreio").textContent = nRecreo;
   if ($("cz-almoco")) $("cz-almoco").textContent = nAlmoco;
+  const cozinhaWrap = document.querySelector(".cozinha-wrap");
+  if (cozinhaWrap) cozinhaWrap.dataset.total = nRecreo + nAlmoco;
 
   if ($("stat-recreio")) {
     const { nRecreo: nr, nAlmoco: na, nTotal: nt, nSem: ns } = calcStats();

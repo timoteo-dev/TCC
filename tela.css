@@ -3,18 +3,18 @@
    ══════════════════════════════════════════════════════ */
 
 :root {
-  --bg:       #F4EFE6;
+  --bg:       #FFF9F0;
   --surface:  #FFFFFF;
-  --primary:  #1B3D1B;
-  --p-hover:  #264F26;
-  --accent:   #C4511A;
-  --text:     #181818;
-  --muted:    #7A7165;
-  --border:   #E0D9CE;
-  --green:    #15622E;
-  --green-bg: #D6F5E3;
-  --red:      #9B1B1B;
-  --red-bg:   #FDE8E8;
+  --primary:  #7C1F1B;
+  --p-hover:  #A52B27;
+  --accent:   #EF7D1D;
+  --text:     #301310;
+  --muted:    #765D4B;
+  --border:   #EAD8BD;
+  --green:    #256247;
+  --green-bg: #D8F5E2;
+  --red:      #C63430;
+  --red-bg:   #FFE9E7;
   --yellow:   #92400E;
   --yellow-bg:#FEF3C7;
 }
@@ -41,7 +41,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 }
 .header-brand { display: flex; align-items: center; gap: 12px; }
 .brand-icon { font-size: 22px; }
-.brand-name { display: block; font-family: 'Fraunces', serif; font-size: 17px; font-weight: 700; color: #fff; }
+.brand-name { display: block; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 20px; font-weight: 800; color: #fff; }
 .brand-sub  { display: block; font-size: 11px; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .1em; margin-top: 1px; }
 
 .header-actions { display: flex; align-items: center; gap: 14px; }
@@ -83,13 +83,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   padding: 28px; border: 1.5px solid var(--border);
 }
 .card-header { margin-bottom: 26px; }
-.card-title { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-.card-title-sm { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
+.card-title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+.card-title-sm { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 16px; }
 .card-sub { color: var(--muted); font-size: 13px; line-height: 1.5; }
 
 /* ── STAT BIG ────────────────────────────────────────── */
 .stat-card-big { text-align: center; padding: 32px 20px; }
-.scb-num { font-family: 'Fraunces', serif; font-size: 72px; font-weight: 700; color: var(--primary); line-height: 1; }
+.scb-num { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 72px; font-weight: 800; color: var(--primary); line-height: 1; }
 .scb-lbl { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-top: 8px; }
 
 /* ── FORM ────────────────────────────────────────────── */
@@ -259,7 +259,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   animation: modalIn .22s ease;
 }
 .modal-icon  { font-size: 42px; display: block; margin-bottom: 18px; }
-.modal-title { font-family: 'Fraunces', serif; font-size: 22px; color: var(--text); margin-bottom: 8px; }
+.modal-title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
 .modal-sub   { color: var(--muted); font-size: 14px; margin-bottom: 28px; line-height: 1.5; }
 .modal-btns  { display: flex; gap: 10px; }
 .btn-modal-cancel {
