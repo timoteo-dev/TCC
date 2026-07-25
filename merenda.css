@@ -99,27 +99,21 @@ body:has(#screen-cozinha.active) .nav-tab.active::after { background: var(--red)
 }
 .login-left {
   position: relative; min-height: 650px; display: flex; align-items: flex-start;
-  justify-content: center; padding: clamp(56px, 8vh, 96px) 40px 42px; overflow: hidden;
+  justify-content: center; padding: clamp(25px, 4vh, 48px) 40px 42px; overflow: hidden;
 }
 .login-left::before {
-  content: ""; position: absolute; bottom: 44px; left: 5%; width: min(88%, 600px); height: 290px;
-  border-radius: 36px; background: linear-gradient(135deg, rgba(255,255,255,.14), rgba(115,26,20,.22));
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.28), 0 20px 45px rgba(88,8,7,.22);
+  content: none; display: none;
 }
-.login-left::after {
-  content: ""; position: absolute; z-index: 0; right: -180px; top: -140px; width: 420px; height: 420px;
-  border: 1px solid rgba(255,255,255,.16); border-radius: 50%; box-shadow: 0 0 0 44px rgba(255,255,255,.035), 0 0 0 104px rgba(255,255,255,.025);
-}
-.login-deco { position: relative; z-index: 1; width: min(100%, 570px); color: #fff; }
+.login-left::after { content: none; display: none; }
+.login-deco { position: relative; z-index: 2; width: min(100%, 570px); color: #fff; }
 .deco-num { display: block; font-family: "Plus Jakarta Sans", sans-serif; font-size: clamp(40px, 5vw, 63px); font-weight: 800; letter-spacing: -3px; margin-bottom: 4px; }
 .deco-num::after { content: "◒"; margin-left: 4px; font-size: .8em; transform: rotate(180deg); display: inline-block; }
 .deco-text { display: block; font-family: "Plus Jakarta Sans", sans-serif; font-size: clamp(23px, 2.1vw, 31px); font-weight: 700; line-height: 1.2; }
 .login-visual {
-  position: absolute; z-index: 1; bottom: 44px; left: 5%; width: min(88%, 600px); height: 290px;
-  overflow: hidden; border-radius: 36px; background: rgba(255,255,255,.16);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.3), 0 20px 45px rgba(88,8,7,.24);
+  position: absolute; z-index: 0; top: 170px; right: 0; bottom: 0; left: 0; width: 100%; height: auto;
+  overflow: hidden; background: transparent;
 }
-.login-visual-video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.login-visual-video { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; background: #d92d37; }
 .login-right {
   position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;
   padding: 42px clamp(30px, 6vw, 110px); background: var(--cream);
@@ -166,29 +160,26 @@ body:has(#screen-cozinha.active) .nav-tab.active::after { background: var(--red)
 #aluno-order-section { display: grid; grid-template-columns: minmax(280px, 1fr) 170px minmax(280px, 1fr); align-items: center; column-gap: 22px; row-gap: 30px; }
 .section-label { grid-column: 1 / -1; color: #cf7928; font-size: 22px; font-weight: 800; text-transform: uppercase; letter-spacing: -.7px; }
 .meals-grid { display: contents; }
-.meal-card { position: relative; display: grid; grid-template-columns: 200px 1fr; align-items: center; min-height: 284px; padding: 18px; overflow: hidden; border: 2px solid #e5ad62; border-radius: 28px; background: #fff; box-shadow: var(--shadow); transition: .2s ease; }
-#meal-recreio { grid-column: 1; }
-#meal-almoco { grid-column: 3; }
+.meal-card { position: relative; display: grid; grid-template-columns: 200px 1fr; align-items: center; width: 100%; height: 284px; min-height: 284px; padding: 18px; overflow: hidden; border: 2px solid #e5ad62; border-radius: 28px; background: #fff; box-shadow: var(--shadow); transition: .2s ease; }
+#meal-recreio { grid-column: 1; grid-row: 2; }
+#meal-almoco { grid-column: 3; grid-row: 2; }
 .meal-card:hover, .meal-card.selected { transform: translateY(-3px); border-color: #e66b20; box-shadow: 0 16px 31px rgba(140,65,23,.2); }
 .meal-card.selected::after { content: "✓"; position: absolute; top: 14px; right: 15px; display: grid; place-items: center; width: 27px; height: 27px; border-radius: 50%; background: var(--orange-deep); color: #fff; font-size: 15px; font-weight: 800; }
-.mc-icon { position: relative; width: 100%; height: 100%; min-height: 244px; overflow: hidden; border-radius: 16px; color: transparent; }
-#meal-recreio .mc-icon { background: radial-gradient(circle at 23% 24%, #f9d46b 0 5%, transparent 5.6%), radial-gradient(circle at 76% 18%, #e44841 0 10%, transparent 10.7%), radial-gradient(circle at 73% 82%, #69351f 0 24%, transparent 24.5%), linear-gradient(142deg, #9b4c23 0%, #e79942 45%, #7f351d 100%); }
-#meal-almoco .mc-icon { background: radial-gradient(circle at 50% 49%, #fbf6df 0 22%, #f0bb5e 22.7% 25%, #fffdf7 25.5% 42%, transparent 42.5%), radial-gradient(circle at 56% 44%, #5b9a45 0 8%, transparent 8.5%), radial-gradient(circle at 40% 58%, #e67b32 0 8%, transparent 8.5%), linear-gradient(140deg, #e7e5df, #bbb9b5); }
-.mc-icon::after { position: absolute; right: 13%; bottom: 6%; color: rgba(255,255,255,.9); font-size: 80px; filter: drop-shadow(0 3px 2px rgba(57,21,9,.2)); }
-#meal-recreio .mc-icon::after { content: "🥐"; }
-#meal-almoco .mc-icon::after { content: "🥗"; }
+.mc-icon { position: relative; width: 100%; height: 244px; min-height: 244px; overflow: hidden; border-radius: 16px; background: #f3eee5; }
+.mc-icon::before, .mc-icon::after { content: none !important; display: none !important; }
+.meal-image { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
 .mc-body { align-self: center; padding: 10px 0 10px 17px; text-align: left; }
 .mc-name { margin-bottom: 8px; color: #702017; font-family: "Plus Jakarta Sans", sans-serif; font-size: clamp(20px, 2vw, 28px); line-height: 1.08; letter-spacing: -1.1px; }
 .mc-time, .mc-dur { color: #693126; font-size: 18px; line-height: 1.45; }
 .mc-check { position: absolute; right: 21px; bottom: 17px; width: 65px; height: 42px; border: 0; border-radius: 999px; background: linear-gradient(120deg, #e95913, #ffa126); color: transparent; }
 .mc-check::after { content: "✓"; position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 25px; font-weight: 500; }
 .meal-card.selected .mc-check { background: linear-gradient(120deg, #c84019, #f38013); color: transparent; }
-.btn-ambas { grid-column: 2; align-self: center; width: 170px; min-height: 116px; padding: 11px 9px; border: 2px solid #b9632a; border-radius: 27px; background: #fff7eb; box-shadow: var(--shadow); color: #6b261b; transition: .18s; }
+.btn-ambas { grid-column: 2; grid-row: 3; align-self: center; display: grid; place-items: center; width: 170px; min-height: 116px; padding: 11px 9px; border: 2px solid #b9632a; border-radius: 27px; background: #fff7eb; box-shadow: var(--shadow); color: #6b261b; transition: .18s; }
 .btn-ambas:hover, .btn-ambas.selected { transform: translateY(-3px); background: #fff1dc; box-shadow: 0 15px 27px rgba(140,65,23,.2); }
 .ambas-icons { display: block; margin-bottom: 6px; color: #d15a1b; font-size: 29px; }
 .ambas-label { display: block; font-size: 15px; font-weight: 800; line-height: 1.25; }
 .ambas-check { position: absolute; display: grid; place-items: center; width: 23px; height: 23px; margin: -112px 0 0 128px; border-radius: 50%; background: var(--orange-deep); color: #fff; font-size: 12px; }
-.btn-confirm { grid-column: 1 / -1; justify-self: center; min-width: min(382px, 100%); min-height: 64px; padding: 0 34px; border: 0; border-radius: 999px; background: linear-gradient(105deg, #d95312, #fe9d28); color: #fff; font-size: 23px; font-weight: 800; box-shadow: 0 11px 18px rgba(210,99,22,.25); transition: .18s; }
+.btn-confirm { grid-column: 1 / -1; grid-row: 4; justify-self: center; min-width: min(382px, 100%); min-height: 64px; padding: 0 34px; border: 0; border-radius: 999px; background: linear-gradient(105deg, #d95312, #fe9d28); color: #fff; font-size: 23px; font-weight: 800; box-shadow: 0 11px 18px rgba(210,99,22,.25); transition: .18s; }
 .btn-confirm:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 15px 25px rgba(210,99,22,.3); }
 .btn-confirm:disabled { opacity: .5; cursor: not-allowed; }
 .confirmed-box { max-width: 590px; margin: 0 auto; padding: 48px 34px; border: 2px solid #edb267; border-radius: 28px; background: #fff; text-align: center; box-shadow: var(--shadow); }
@@ -300,8 +291,8 @@ body:has(#screen-cozinha.active) .nav-tab.active::after { background: var(--red)
   .prazo-bar { position: static; width: min(100%, 440px); margin: 30px 0 0; }
   .aluno-header { margin-bottom: 38px; }
   #aluno-order-section { grid-template-columns: 1fr 130px 1fr; gap: 17px; }
-  .meal-card { grid-template-columns: 1fr; min-height: 300px; }
-  .mc-icon { min-height: 157px; }
+  .meal-card { grid-template-columns: 1fr; height: 300px; min-height: 300px; }
+  .mc-icon { height: 157px; min-height: 157px; }
   .mc-body { padding: 12px 2px; }
   .cz-card { min-height: 350px; }
 }
@@ -329,8 +320,8 @@ body:has(#screen-cozinha.active) .nav-tab.active::after { background: var(--red)
   .section-label { align-self: flex-start; font-size: 17px; }
   .meals-grid { display: grid; width: 100%; grid-template-columns: 1fr; gap: 15px; }
   #meal-recreio, #meal-almoco { grid-column: auto; }
-  .meal-card { width: 100%; grid-template-columns: 44% 1fr; min-height: 205px; }
-  .mc-icon { min-height: 166px; }
+  .meal-card { width: 100%; grid-template-columns: 44% 1fr; height: 205px; min-height: 205px; }
+  .mc-icon { height: 166px; min-height: 166px; }
   .mc-name { font-size: 21px; }
   .mc-time, .mc-dur { font-size: 14px; }
   .btn-ambas { width: 100%; min-height: 62px; }

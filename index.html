@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="merenda.css" />
+  <link rel="stylesheet" href="merenda.css?v=20260724-3" />
   
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.8.6/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
@@ -132,16 +132,20 @@
         <p class="section-label">Selecione suas refeições de hoje</p>
         <div class="meals-grid">
           <div class="meal-card" id="meal-recreio" data-meal="recreio">
-            <div class="mc-icon">🥐</div>
+            <div class="mc-icon">
+              <img class="meal-image" src="Gemini_Generated_Image_74z3bz74z3bz74z3.avif" alt="Pão com suco" />
+            </div>
             <div class="mc-body">
-              <h3 class="mc-name">Morning Snack</h3>
+              <h3 class="mc-name">Lanche</h3>
               <p class="mc-time">8:40 – 9:00</p>
               <p class="mc-dur">20 minutos</p>
             </div>
             <div class="mc-check" id="check-recreio"></div>
           </div>
           <div class="meal-card" id="meal-almoco" data-meal="almoco">
-            <div class="mc-icon">🍽️</div>
+            <div class="mc-icon">
+              <img class="meal-image" src="Gemini_Generated_Image_ct6ohmct6ohmct6o.avif" alt="Prato de comida com suco" />
+            </div>
             <div class="mc-body">
               <h3 class="mc-name">Almoço</h3>
               <p class="mc-time">11:30 – 12:20</p>
@@ -152,7 +156,6 @@
         </div>
 
         <button class="btn-ambas" id="btn-ambas">
-          <span class="ambas-icons">🥐 + 🍽️</span>
           <span class="ambas-label">Selecionar Ambas as Refeições</span>
           <span class="ambas-check hidden" id="ambas-check">✓</span>
         </button>
