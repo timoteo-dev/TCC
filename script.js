@@ -298,10 +298,145 @@ function renderCoord() {
   });
 }
 
-$("btn-add-excecao").addEventListener("click", () => {
-  showToast("Exceção adicionada com sucesso");
-  syncCozinha();
+/* ── LÓGICA DO MODAL ADICIONAR EXCEÇÃO (UI/UX PRO MAX) ──── */
+function abrirModalExcecao() {
+  const modal = $("modal-excecao");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function fecharModalExcecao() {
+  const modal = $("modal-excecao");
+  if (modal) modal.classList.add("hidden");
+  
+  const f1 = $("form-excecao-interno");
+  const f2 = $("form-excecao-externo");
+  if (f1) f1.reset();
+  if (f2) f2.reset();
+}
+
+// Botão de abrir no painel da coordenação
+if ($("btn-add-excecao")) {
+  $("btn-add-excecao").addEventListener("click", abrirModalExcecao);
+}
+
+// Fechar modal
+["btn-close-excecao", "btn-cancel-excecao-1", "btn-cancel-excecao-2"].forEach(id => {
+  const btn = $(id);
+  if (btn) btn.addEventListener("click", fecharModalExcecao);
 });
+
+// Fechar clicando no fundo escuro
+const modalExcecao = $("modal-excecao");
+if (modalExcecao) {
+  modalExcecao.addEventListener("click", (e) => {
+    if (e.target === modalExcecao) fecharModalExcecao();
+  });
+}
+
+// Troca de Abas (Aluno Interno vs Aluno de Outra Escola)
+const tabInterno = $("tab-aluno-interno");
+const tabExterno = $("tab-aluno-externo");
+const formInterno = $("form-excecao-interno");
+const formExterno = $("form-excecao-externo");
+
+if (tabInterno && tabExterno) {
+  tabInterno.addEventListener("click", () => {
+    tabInterno.classList.add("active");
+    tabExterno.classList.remove("active");
+    if (formInterno) formInterno.classList.remove("hidden");
+    if (formExterno) formExterno.classList.add("hidden");
+  });
+
+  tabExterno.addEventListener("click", () => {
+    tabExterno.classList.add("active");
+    tabInterno.classList.remove("active");
+    if (formExterno) formExterno.classList.remove("hidden");
+    if (formInterno) formInterno.classList.add("hidden");
+  });
+}
+
+// Submissão Opção 1: Aluno da Escola (Interno)
+if (formInterno) {
+  formInterno.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const turma = $("exc-turma").value;
+    const nome = $("exc-nome-interno").value.trim();
+    const mealChoice = document.querySelector('input[name="exc-meal-interno"]:checked')?.value || "recreio";
+
+    if (!turma || !nome) {
+      showToast("Por favor, selecione a turma e digite o nome do aluno.");
+      return;
+    }
+
+    const recreio = mealChoice === "recreio" || mealChoice === "ambos";
+    const almoco  = mealChoice === "almoco"  || mealChoice === "ambos";
+
+    // Cria as iniciais do aluno
+    const parts = nome.split(" ");
+    let initials = parts[0][0];
+    if (parts.length > 1) initials += parts[parts.length - 1][0];
+    initials = initials.toUpperCase();
+
+    // Verifica se aluno já existe na lista
+    let existing = students.find(s => s.name.toLowerCase() === nome.toLowerCase() && s.turma === turma);
+    if (existing) {
+      existing.recreio = recreio;
+      existing.almoco = almoco;
+    } else {
+      const newStudent = {
+        id: Date.now(),
+        name: nome,
+        turma: turma,
+        recreio: recreio,
+        almoco: almoco,
+        initials: initials
+      };
+      students.push(newStudent);
+    }
+
+    showToast(`Exceção confirmada para ${nome} (${turma})! ✨`);
+    renderCoord();
+    syncCozinha();
+    fecharModalExcecao();
+  });
+}
+
+// Submissão Opção 2: Aluno de Outra Escola (Externo / Visitante)
+if (formExterno) {
+  formExterno.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const nome = $("exc-nome-externo").value.trim();
+    const escola = $("exc-escola-externa").value.trim();
+    const refeicaoDesc = $("exc-refeicao-externa").value.trim();
+
+    if (!nome || !escola || !refeicaoDesc) {
+      showToast("Por favor, preencha todos os campos do aluno visitante.");
+      return;
+    }
+
+    // Cria as iniciais do visitante
+    const parts = nome.split(" ");
+    let initials = parts[0][0];
+    if (parts.length > 1) initials += parts[parts.length - 1][0];
+    initials = initials.toUpperCase();
+
+    // Adiciona como aluno visitante de outra escola
+    const newVisitor = {
+      id: Date.now(),
+      name: `${nome} [🏫 ${escola}] - ${refeicaoDesc}`,
+      turma: "Visitantes Externa",
+      recreio: true,
+      almoco: true,
+      initials: initials
+    };
+    students.push(newVisitor);
+
+    showToast(`Exceção cadastrada para ${nome} (${escola})! ✨`);
+    renderCoord();
+    syncCozinha();
+    fecharModalExcecao();
+  });
+}
 
 /* ── TELA COZINHA ────────────────────────────────────────── */
 function renderCozinha() {

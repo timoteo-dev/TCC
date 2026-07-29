@@ -352,10 +352,193 @@ body:has(#screen-cozinha.active) .nav-tab.active::after { background: var(--red)
   .cz-time { margin-left: 83px; font-size: 17px; }
   .facial-wrap { padding: 18px 12px 32px; }
   .facial-main { min-height: 0; padding: 18px 13px 28px; border-radius: 13px; }
+  .mc-name { font-size: 21px; }
+  .mc-time, .mc-dur { font-size: 14px; }
+  .btn-ambas { width: 100%; min-height: 62px; }
+  .ambas-icons { display: inline; margin: 0 8px 0 0; font-size: 21px; }
+  .ambas-label { display: inline; font-size: 15px; }
+  .ambas-check { position: static; display: inline-grid; margin: 0 0 0 7px; }
+  .btn-confirm { width: 100%; min-width: 0; min-height: 56px; font-size: 18px; }
+  .coord-wrap { padding: 35px 16px 48px; }
+  .coord-top { gap: 18px; flex-direction: column; }
+  .coord-title { font-size: 39px; }
+  .coord-date { font-size: 16px; }
+  .btn-excecao { margin: 0; font-size: 15px; }
+  .stats-row { grid-template-columns: 1fr; gap: 17px; }
+  .stat-box { min-height: 138px; }
+  .student-row { padding: 11px; gap: 9px; flex-wrap: wrap; }
+  .s-name { font-size: 17px; }
+  .meal-badges { order: 3; width: 100%; }
+  .mbadge { flex: 1; padding: 7px; font-size: 13px; text-align: center; }
+  .act-btn { font-size: 14px; }
+  .cozinha-wrap { padding: 29px 16px 42px; }
+  .cz-title { font-size: 34px; }
+  .cz-chips { margin-bottom: 22px; }
+  .cz-cards { grid-template-columns: 1fr; gap: 17px; margin-top: 20px; }
+  .cz-card { min-height: 290px; border-width: 9px; border-radius: 34px; }
+  .cz-num { font-size: 94px; }
+  .cz-icon { font-size: 48px; margin-top: 21px; }
+  .cz-lbl { margin-left: 80px; font-size: 23px; }
+  .cz-time { margin-left: 83px; font-size: 17px; }
+  .facial-wrap { padding: 18px 12px 32px; }
+  .facial-main { min-height: 0; padding: 18px 13px 28px; border-radius: 13px; }
   .cam-controls { gap: 8px; }
   .btn-cam { min-width: 0; min-height: 50px; padding: 0 12px; font-size: 14px; }
   .cam-wrap { border-radius: 23px; }
   .cam-idle-icon { font-size: 64px; }
   .cam-msg { font-size: 13px; }
   .fs-text { font-size: 16px; text-align: center; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   MODAL ADICIONAR EXCEÇÃO (UI/UX Pro Max)
+   ══════════════════════════════════════════════════════════ */
+.modal-backdrop {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 900;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  background: rgba(23, 30, 24, 0.65);
+  backdrop-filter: blur(10px) saturate(180%);
+  animation: fadeUp 0.24s ease both;
+}
+.modal-backdrop.hidden { display: none !important; }
+
+.excecao-modal-box {
+  position: relative;
+  width: min(100%, 540px);
+  padding: clamp(24px, 4vw, 36px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 28px;
+  background: var(--paper);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.26), 0 0 0 1px rgba(235, 108, 17, 0.08);
+  animation: modalPop 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.excecao-modal-close {
+  position: absolute; top: 20px; right: 20px;
+  width: 36px; height: 36px;
+  border: 0; border-radius: 50%;
+  background: #f4ea style;
+  background: var(--pale); color: var(--muted);
+  font-size: 22px; line-height: 1; cursor: pointer;
+  display: grid; place-items: center;
+  transition: all 0.18s ease;
+}
+.excecao-modal-close:hover {
+  background: #ebded0; color: var(--ink); transform: rotate(90deg);
+}
+
+.excecao-header { margin-bottom: 20px; text-align: left; }
+.excecao-icon {
+  display: grid; place-items: center;
+  width: 46px; height: 46px; margin-bottom: 12px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fff0db, #ffe3ba);
+  color: var(--orange-deep); font-size: 22px;
+}
+.excecao-title {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 24px; font-weight: 800; color: var(--ink);
+  letter-spacing: -0.5px;
+}
+.excecao-sub {
+  margin-top: 6px; color: var(--muted); font-size: 14px; line-height: 1.45;
+}
+
+/* Abas (Segmented Control) */
+.excecao-tabs-row {
+  display: flex; gap: 6px;
+  padding: 5px; margin: 18px 0 22px;
+  border-radius: 16px; background: #f1e6d4;
+}
+.excecao-tab {
+  flex: 1; min-height: 42px;
+  padding: 8px 12px; border: 0; border-radius: 12px;
+  background: transparent; color: var(--muted);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.excecao-tab:hover { color: var(--ink); }
+.excecao-tab.active {
+  background: #fff; color: var(--green);
+  font-weight: 700; box-shadow: 0 3px 12px rgba(0, 0, 0, 0.09);
+}
+
+/* Formulário e Inputs */
+.excecao-form { display: flex; flex-direction: column; gap: 16px; }
+.excecao-form.hidden { display: none !important; }
+
+.field-lbl {
+  display: block; margin-bottom: 6px;
+  font-size: 14px; font-weight: 700; color: var(--ink);
+}
+.field-inp {
+  width: 100%; min-height: 48px;
+  padding: 0 16px; border: 1.5px solid #e2d6c5;
+  border-radius: 14px; background: #fffefd;
+  font-size: 15px; color: var(--ink);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.field-inp:focus {
+  outline: none; border-color: var(--orange-deep);
+  box-shadow: 0 0 0 4px rgba(235, 108, 17, 0.18);
+}
+.field-inp::placeholder { color: #a89382; }
+
+/* Chips de Seleção de Refeição */
+.meal-options-chips {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 4px;
+}
+.chip-option input[type="radio"] {
+  position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
+}
+.chip-content {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 46px; padding: 6px 10px;
+  border: 1.5px solid #e2d6c5; border-radius: 13px;
+  background: #fff; color: var(--ink);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.18s ease; text-align: center;
+}
+.chip-option:hover .chip-content { border-color: var(--orange); }
+.chip-option input[type="radio"]:checked + .chip-content {
+  border-color: var(--green-2); background: #e6f4ec;
+  color: var(--green); font-weight: 700;
+  box-shadow: 0 2px 8px rgba(23, 75, 55, 0.14);
+}
+
+/* Ações */
+.excecao-actions {
+  display: flex; gap: 12px; margin-top: 14px; padding-top: 16px;
+  border-top: 1px solid #efe4d3;
+}
+.btn-cancel-excecao {
+  flex: 1; min-height: 48px;
+  border: 1.5px solid #e2d6c5; border-radius: 14px;
+  background: transparent; color: var(--muted);
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  transition: all 0.18s ease;
+}
+.btn-cancel-excecao:hover {
+  background: #f7efe2; color: var(--ink); border-color: #d8c5ad;
+}
+.btn-submit-excecao {
+  flex: 1.5; min-height: 48px;
+  border: 0; border-radius: 14px;
+  background: linear-gradient(105deg, var(--orange), var(--orange-deep));
+  color: #fff; font-size: 15px; font-weight: 700;
+  box-shadow: 0 8px 18px rgba(235, 108, 17, 0.25); cursor: pointer;
+  transition: all 0.18s ease;
+}
+.btn-submit-excecao:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 22px rgba(235, 108, 17, 0.35);
+}
+
+@media (max-width: 540px) {
+  .meal-options-chips { grid-template-columns: 1fr; }
+  .excecao-modal-box { padding: 22px 18px; }
+  .excecao-tabs-row { flex-direction: column; }
 }

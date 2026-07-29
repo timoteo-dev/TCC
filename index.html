@@ -280,6 +280,127 @@
           <div class="ir-top">
             <div class="ir-avatar" id="ir-avatar"></div>
             <div class="ir-info">
+
+        <button class="btn-confirm" id="btn-confirm-order" disabled>
+          Selecione ao menos uma refeição
+        </button>
+      </div>
+
+      <div class="confirmed-box hidden" id="aluno-confirmed">
+        <div class="cb-icon">✅</div>
+        <h3 class="cb-title">Pedido confirmado!</h3>
+        <p class="cb-sub">Sua merenda está reservada para hoje.</p>
+        <div class="cb-tags" id="confirmed-tags"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="screen" id="screen-coordenacao">
+    <div class="coord-wrap">
+
+      <div class="coord-top">
+        <div>
+          <h2 class="coord-title">Painel de Coordenação</h2>
+          <p class="coord-date" id="coord-date"></p>
+        </div>
+        <button class="btn-excecao" id="btn-add-excecao">+ Adicionar Exceção</button>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-box">
+          <span class="sb-num green" id="stat-recreio">0</span>
+          <span class="sb-lbl">🥐 Recreio</span>
+        </div>
+        <div class="stat-box">
+          <span class="sb-num green" id="stat-almoco">0</span>
+          <span class="sb-lbl">🍽️ Almoço</span>
+        </div>
+        <div class="stat-box">
+          <span class="sb-num dark" id="stat-total">0</span>
+          <span class="sb-lbl">Com pedido</span>
+        </div>
+        <div class="stat-box">
+          <span class="sb-num gray" id="stat-sem">0</span>
+          <span class="sb-lbl">Sem pedido</span>
+        </div>
+      </div>
+
+      <div id="coord-list"></div>
+
+    </div>
+  </section>
+
+  <section class="screen" id="screen-cozinha">
+    <div class="cozinha-wrap">
+      <h2 class="cz-title">Resumo dos Pedidos</h2>
+      <p class="cz-sub" id="cz-date"></p>
+      <div class="cz-cards">
+        <div class="cz-card">
+          <span class="cz-icon">🥐</span>
+          <div class="cz-num" id="cz-recreio">0</div>
+          <div class="cz-lbl">1º Recreio</div>
+          <div class="cz-time">8:40 – 9:00</div>
+        </div>
+        <div class="cz-card highlight">
+          <span class="cz-icon">🍽️</span>
+          <div class="cz-num" id="cz-almoco">0</div>
+          <div class="cz-lbl">Almoço</div>
+          <div class="cz-time">11:30 – 12:20</div>
+        </div>
+      </div>
+      <div class="cz-chips">
+        <span class="cz-chip">📅 <span id="cz-chip-date"></span></span>
+        <span class="cz-chip live"><span class="live-dot"></span> Atualizado em tempo real</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-facial">
+    <div class="facial-wrap">
+
+      <div class="facial-header">
+        <h2 class="fh-title">Reconhecimento Facial</h2>
+        <p class="fh-sub">Confirme a identidade do aluno na retirada da merenda</p>
+      </div>
+
+      <div class="facial-main">
+
+        <div class="cam-controls">
+          <button class="btn-cam btn-cam-on" id="btn-cam-on">
+            <span class="cam-btn-icon">📷</span>
+            Ligar Câmera
+          </button>
+          <button class="btn-cam btn-cam-off" id="btn-cam-off" disabled>
+            <span class="cam-btn-icon">⏹</span>
+            Desligar Câmera
+          </button>
+        </div>
+
+        <div class="cam-wrap" id="cam-wrap">
+          <video id="cam-video" autoplay muted playsinline></video>
+          <canvas id="cam-canvas"></canvas>
+          <div class="cam-overlay" id="cam-overlay">
+            <div class="cam-idle-icon">📷</div>
+            <p class="cam-msg" id="cam-msg">Pressione "Ligar Câmera" para iniciar</p>
+          </div>
+          <div class="cam-frame">
+            <div class="cf-tl"></div>
+            <div class="cf-tr"></div>
+            <div class="cf-bl"></div>
+            <div class="cf-br"></div>
+          </div>
+        </div>
+
+        <div class="facial-status" id="facial-status">
+          <div class="fs-dot gray" id="fs-dot"></div>
+          <span class="fs-text" id="fs-text">Câmera desligada</span>
+        </div>
+
+        <div class="id-result hidden" id="id-result">
+          <div class="ir-top">
+            <div class="ir-avatar" id="ir-avatar"></div>
+            <div class="ir-info">
               <div class="ir-name" id="ir-name"></div>
               <div class="ir-turma" id="ir-turma"></div>
             </div>
@@ -292,6 +413,95 @@
       </div>
     </div>
   </section>
+
+  <!-- Modal Adicionar Exceção (UI/UX Pro Max) -->
+  <div class="modal-backdrop hidden" id="modal-excecao">
+    <div class="modal-box excecao-modal-box">
+      <button class="excecao-modal-close" id="btn-close-excecao" type="button" aria-label="Fechar modal">&times;</button>
+      
+      <div class="excecao-header">
+        <div class="excecao-icon">✨</div>
+        <h3 class="excecao-title">Adicionar Exceção de Merenda</h3>
+        <p class="excecao-sub">Cadastre pedidos excepcionais para alunos da escola ou visitantes externos.</p>
+      </div>
+
+      <!-- Abas de Alternância (Segmented Control) -->
+      <div class="excecao-tabs-row" role="tablist">
+        <button type="button" class="excecao-tab active" id="tab-aluno-interno" data-tab="interno">
+          🎓 Aluno da Escola
+        </button>
+        <button type="button" class="excecao-tab" id="tab-aluno-externo" data-tab="externo">
+          🏫 Aluno de Outra Escola
+        </button>
+      </div>
+
+      <!-- Opção 1: Aluno da Escola (Interno) -->
+      <form id="form-excecao-interno" class="excecao-form">
+        <div class="field-group">
+          <label class="field-lbl" for="exc-turma">🏫 Turma do Aluno</label>
+          <select class="field-inp" id="exc-turma" required>
+            <option value="" disabled selected>Selecione a turma...</option>
+            <option value="1A">1º Ano A</option>
+            <option value="1B">1º Ano B</option>
+            <option value="2A">2º Ano A</option>
+            <option value="3A">3º Ano A</option>
+            <option value="3B">3º Ano B</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label class="field-lbl" for="exc-nome-interno">👤 Nome do Aluno</label>
+          <input class="field-inp" id="exc-nome-interno" type="text" placeholder="Digite o nome do aluno..." required />
+        </div>
+
+        <div class="field-group">
+          <label class="field-lbl">🍽️ Refeição Desejada</label>
+          <div class="meal-options-chips">
+            <label class="chip-option">
+              <input type="radio" name="exc-meal-interno" value="recreio" checked />
+              <span class="chip-content">🥐 1º Recreio</span>
+            </label>
+            <label class="chip-option">
+              <input type="radio" name="exc-meal-interno" value="almoco" />
+              <span class="chip-content">🍽️ Almoço</span>
+            </label>
+            <label class="chip-option">
+              <input type="radio" name="exc-meal-interno" value="ambos" />
+              <span class="chip-content">🥐🍽️ Ambas</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="excecao-actions">
+          <button type="button" class="btn-cancel-excecao" id="btn-cancel-excecao-1">Cancelar</button>
+          <button type="submit" class="btn-submit-excecao">Confirmar Exceção ✨</button>
+        </div>
+      </form>
+
+      <!-- Opção 2: Aluno de Outra Escola (Externo / Visitante) -->
+      <form id="form-excecao-externo" class="excecao-form hidden">
+        <div class="field-group">
+          <label class="field-lbl" for="exc-nome-externo">👤 Nome do Aluno Visitante</label>
+          <input class="field-inp" id="exc-nome-externo" type="text" placeholder="Digite o nome completo do aluno..." required />
+        </div>
+
+        <div class="field-group">
+          <label class="field-lbl" for="exc-escola-externa">🏫 Especificar Escola de Origem</label>
+          <input class="field-inp" id="exc-escola-externa" type="text" placeholder="Ex: E.E. Maria José da Silva" required />
+        </div>
+
+        <div class="field-group">
+          <label class="field-lbl" for="exc-refeicao-externa">🍱 O que vai querer comer?</label>
+          <input class="field-inp" id="exc-refeicao-externa" type="text" placeholder="Ex: Almoço / Lanche / Prato Especial" required />
+        </div>
+
+        <div class="excecao-actions">
+          <button type="button" class="btn-cancel-excecao" id="btn-cancel-excecao-2">Cancelar</button>
+          <button type="submit" class="btn-submit-excecao">Confirmar Exceção ✨</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <div class="modal-backdrop hidden" id="modal-backdrop">
     <div class="modal-box" id="modal-auth">
