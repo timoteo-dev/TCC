@@ -6,8 +6,8 @@
 
 "use strict";
 
-const SUPABASE_URL = "https://cjuqkecvlwryjtgwxkjc.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqdXFrZWN2bHdyeWp0Z3d4a2pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MjYwMjksImV4cCI6MjA5NTEwMjAyOX0.hUDvHjX8EovKETJdREXxuXvL7EyE1wLXTIR1zXcV04w"; 
+const SUPABASE_URL = "https://sifhqlbobxaofeypjnhd.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpZmhxbGJvYnhhb2ZleXBqbmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxMDYzNTIsImV4cCI6MjA5ODY4MjM1Mn0.tECc42Xbmya3s7rafycICTqMQAMIMTjhH3Te7bZRofI";
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -15,7 +15,6 @@ async function carregarTurmasLogin() {
   const { data, error } = await db
     .from("turmas")
     .select("id, nome")
-    .eq("ativo", true)
     .order("nome");
 
   if (error) {
@@ -119,57 +118,122 @@ $$(".role-btn").forEach(btn => {
 
     // Mostra a escolha de Turma apenas se o perfil selecionado for 'Aluno'
     const groupTurma = $("group-turma");
+    const groupEmail = $("group-email");
     if (activeRole === "aluno") {
       groupTurma.classList.remove("hidden");
+      groupEmail.classList.add("hidden");
     } else {
       groupTurma.classList.add("hidden");
+      groupEmail.classList.remove("hidden");
     }
   });
 });
 
 // Lógica de Entrar (Login)
-$("btn-login").addEventListener("click", () => {
+$("btn-login").addEventListener("click", async () => {
   const inputNome = $("input-nome").value.trim();
   const inputSenha = $("input-senha").value.trim();
   const inputTurma = $("input-turma").value;
-
-  if (!inputNome || !inputSenha) {
-    $("login-error").textContent = "Nome e senha são obrigatórios.";
-    $("login-error").classList.remove("hidden");
-    return;
-  }
-
-  if (activeRole === "aluno" && !inputTurma) {
-    $("login-error").textContent = "Por favor, selecione a sua turma.";
-    $("login-error").classList.remove("hidden");
-    return;
-  }
+  const inputEmail = $("input-email").value.trim();
 
   $("login-error").classList.add("hidden");
-  isLoggedIn = true;
-  loggedInRole = activeRole; // Tranca o utilizador na aba selecionada
 
-  // Remove o bloqueio visual apenas da aba permitida
+  if (activeRole === "aluno") {
+    if (!inputNome || !inputSenha || !inputTurma) {
+      $("login-error").textContent = "Nome, turma e PIN são obrigatórios.";
+      $("login-error").classList.remove("hidden");
+      return;
+    }
+
+    const { data, error } = await db.rpc("login_aluno_por_pin", {
+      p_nome: inputNome,
+      p_turma_id: inputTurma,
+      p_pin: inputSenha,
+    });
+
+    if (error || !data || data.length === 0) {
+      $("login-error").textContent = error ? error.message : "Não foi possível entrar.";
+      $("login-error").classList.remove("hidden");
+      return;
+    }
+
+    isLoggedIn = true;
+    loggedInRole = "aluno";
+    activeRole = "aluno";
+
+    $$(".nav-protected").forEach(tab => {
+      if (tab.dataset.screen === loggedInRole) tab.classList.add("unlocked");
+      else tab.classList.remove("unlocked");
+    });
+
+    const aluno = data[0];
+    $("aluno-nome-display").textContent = aluno.nome;
+    const nameParts = aluno.nome.split(" ");
+    let initials = nameParts[0][0];
+    if (nameParts.length > 1) initials += nameParts[nameParts.length - 1][0];
+    $("aluno-avatar-display").textContent = initials.toUpperCase();
+
+    showToast(`Bem-vindo(a), ${aluno.nome}!`);
+    goTo("aluno");
+    return;
+  }
+
+  // Coordenação / Cozinha → login real via Supabase Auth
+  if (!inputEmail || !inputSenha) {
+    $("login-error").textContent = "E-mail e senha são obrigatórios.";
+    $("login-error").classList.remove("hidden");
+    return;
+  }
+
+  const { data: authData, error: authError } = await db.auth.signInWithPassword({
+    email: inputEmail,
+    password: inputSenha,
+  });
+
+  if (authError) {
+    $("login-error").textContent = "E-mail ou senha inválidos.";
+    $("login-error").classList.remove("hidden");
+    return;
+  }
+
+  const { data: perfil, error: perfilError } = await db
+    .from("perfis")
+    .select("papel, nome")
+    .eq("id", authData.user.id)
+    .single();
+
+  if (perfilError || !perfil) {
+    $("login-error").textContent = "Perfil de acesso não encontrado.";
+    $("login-error").classList.remove("hidden");
+    await db.auth.signOut();
+    return;
+  }
+
+  const papelPermiteCoordenacao = ["coordenador", "admin"].includes(perfil.papel);
+  const papelPermiteCozinha = ["merendeira", "coordenador", "admin"].includes(perfil.papel);
+
+  if (activeRole === "coordenacao" && !papelPermiteCoordenacao) {
+    $("login-error").textContent = "Esse usuário não tem acesso à Coordenação.";
+    $("login-error").classList.remove("hidden");
+    await db.auth.signOut();
+    return;
+  }
+  if (activeRole === "cozinha" && !papelPermiteCozinha) {
+    $("login-error").textContent = "Esse usuário não tem acesso à Cozinha.";
+    $("login-error").classList.remove("hidden");
+    await db.auth.signOut();
+    return;
+  }
+
+  isLoggedIn = true;
+  loggedInRole = activeRole;
+
   $$(".nav-protected").forEach(tab => {
     if (tab.dataset.screen === loggedInRole) tab.classList.add("unlocked");
     else tab.classList.remove("unlocked");
   });
 
-  // Atualiza as informações da interface se for Aluno
-  if (activeRole === "aluno") {
-    $("aluno-nome-display").textContent = inputNome;
-    $("aluno-turma-display").textContent = `Turma ${inputTurma} · Ensino Médio`;
-    
-    // Cria as iniciais baseadas no nome digitado
-    const nameParts = inputNome.split(" ");
-    let initials = nameParts[0][0];
-    if (nameParts.length > 1) {
-      initials += nameParts[nameParts.length - 1][0];
-    }
-    $("aluno-avatar-display").textContent = initials.toUpperCase();
-  }
-
-  showToast(`Bem-vindo(a), ${inputNome}!`);
+  showToast(`Bem-vindo(a), ${perfil.nome}!`);
   goTo(loggedInRole);
 });
 

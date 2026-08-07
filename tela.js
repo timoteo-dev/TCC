@@ -3,9 +3,8 @@
 /* ══════════════════════════════════════════════════════
    CONFIGURAÇÃO SUPABASE
    ══════════════════════════════════════════════════════ */
-const SUPABASE_URL = "https://cjuqkecvlwryjtgwxkjc.supabase.co";
-// const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqdXFrZWN2bHdyeWp0Z3d4a2pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MjYwMjksImV4cCI6MjA5NTEwMjAyOX0.hUDvHjX8EovKETJdREXxuXvL7EyE1wLXTIR1zXcV04w";
-const SUPABASE_KEY= 'sb_publishable_7HGR3th3tfppiHuf_S9Afg_lnlSKXFK'
+const SUPABASE_URL = "https://sifhqlbobxaofeypjnhd.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpZmhxbGJvYnhhb2ZleXBqbmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxMDYzNTIsImV4cCI6MjA5ODY4MjM1Mn0.tECc42Xbmya3s7rafycICTqMQAMIMTjhH3Te7bZRofI";
 
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -60,7 +59,6 @@ async function carregarTurmas() {
   const { data, error } = await db
     .from("turmas")
     .select("id, nome")
-    .eq("ativo", true)
     .order("nome");
 
   if (error) { toast("Erro ao carregar turmas", "error"); return; }
@@ -116,20 +114,20 @@ $("btn-salvar-aluno").addEventListener("click", async () => {
 
   setLoading("btn-aluno-txt", "btn-aluno-loader", "btn-salvar-aluno", true);
 
+  // Gera uma matrícula simples (não há campo próprio no formulário ainda)
+  const matricula = `AL${Date.now().toString().slice(-8)}`;
 
-  console.log(turmaId)
-
-  // ✅ CORRIGIDO: usa 'senha' (nome correto da coluna) e 'ativo: true'
-  const { data, error } = await db
-    .from("alunos")
-    .insert({ nome, turma_id: parseInt(turmaId), senha: senha, ativo: true })
-    .select("id, nome, turma_id")
-    .single();
+  const { data, error } = await db.rpc("cadastrar_aluno", {
+    p_nome: nome,
+    p_turma_id: turmaId,
+    p_matricula: matricula,
+    p_pin: senha,
+  });
 
   setLoading("btn-aluno-txt", "btn-aluno-loader", "btn-salvar-aluno", false);
 
   if (error) {
-    errEl.textContent = "Erro ao salvar. Verifique se o aluno já está cadastrado.";
+    errEl.textContent = "Erro ao salvar. Verifique se você está logado como Coordenação/Secretaria.";
     errEl.classList.remove("hidden");
     console.log(error)
     return;
