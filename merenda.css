@@ -116,7 +116,7 @@ body:has(#screen-cozinha.active) .nav-tab.active::after { background: var(--red)
 .login-visual-video { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; background: #d92d37; }
 .login-right {
   position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;
-  padding: 42px clamp(30px, 6vw, 110px); background: var(--cream);
+  padding: 42px clamp(30px, 6vw, 110px); background: var(--cream); overflow: hidden; min-width: 0;
 }
 .login-right::before { content: ""; position: absolute; top: -140px; right: -120px; width: 410px; height: 410px; border-radius: 50%; background: #ffc469; opacity: .9; }
 .login-card { position: relative; z-index: 1; width: 100%; max-width: 540px; padding: 48px 54px; background: rgba(255,253,248,.87); border: 1px solid rgba(130,67,30,.18); border-radius: 34px; box-shadow: 0 20px 50px rgba(115,34,20,.12); }
@@ -287,7 +287,9 @@ body:has(#screen-cozinha.active) .nav-tab.active::after { background: var(--red)
   .nav-tabs { overflow-x: auto; max-width: 72%; }
   .nav-tab { font-size: 14px; }
   .login-wrap { grid-template-columns: .86fr 1.14fr; }
-  .login-card { padding: 40px 35px; }
+  .login-card { padding: 40px 32px; }
+  .role-row { gap: 10px; }
+  .role-btn { font-size: 13px; }
   .prazo-bar { position: static; width: min(100%, 440px); margin: 30px 0 0; }
   .aluno-header { margin-bottom: 38px; }
   #aluno-order-section { grid-template-columns: 1fr 130px 1fr; gap: 17px; }
@@ -301,16 +303,21 @@ body:has(#screen-cozinha.active) .nav-tab.active::after { background: var(--red)
   .nav { min-height: 58px; padding: 0 16px; }
   .nav-name { font-size: 23px; }
   .nav-icon { font-size: 23px; }
-  .nav-tabs { gap: 2px; max-width: 65%; }
+  .nav-tabs { gap: 2px; max-width: 68%; overflow-x: auto; }
   .nav-tab { padding: 0 9px; font-size: 13px; }
   .nav-tab.active::after { right: 5px; left: 5px; }
-  .login-wrap { grid-template-columns: 1fr; }
+
+  /* Login: grade em coluna única — empilha o card sobre a imagem sem sobreposição indevida */
+  .login-wrap { grid-template-columns: 1fr; grid-template-areas: "login-right"; }
   .login-left { display: none; }
-  .login-right { min-height: calc(100vh - 58px); padding: 35px 18px; }
-  .login-card { padding: 37px 23px; border-radius: 26px; }
-  .lc-title { font-size: 32px; }
+  .login-right { min-height: calc(100vh - 58px); padding: 32px 18px; }
+  .login-right::before { right: -160px; }
+  .login-card { padding: 34px 22px; border-radius: 26px; }
+  .lc-title { font-size: 31px; }
+  .lc-sub { font-size: 14px; }
   .role-row { gap: 7px; }
   .role-btn { min-height: 46px; font-size: 12px; }
+
   .aluno-wrap { padding: 48px 16px 42px; }
   .ah-greeting, .ah-name { font-size: 38px; letter-spacing: -2px; }
   .ah-turma { font-size: 18px; }
@@ -329,6 +336,7 @@ body:has(#screen-cozinha.active) .nav-tab.active::after { background: var(--red)
   .ambas-label { display: inline; font-size: 15px; }
   .ambas-check { position: static; display: inline-grid; margin: 0 0 0 7px; }
   .btn-confirm { width: 100%; min-width: 0; min-height: 56px; font-size: 18px; }
+
   .coord-wrap { padding: 35px 16px 48px; }
   .coord-top { gap: 18px; flex-direction: column; }
   .coord-title { font-size: 39px; }
@@ -341,6 +349,7 @@ body:has(#screen-cozinha.active) .nav-tab.active::after { background: var(--red)
   .meal-badges { order: 3; width: 100%; }
   .mbadge { flex: 1; padding: 7px; font-size: 13px; text-align: center; }
   .act-btn { font-size: 14px; }
+
   .cozinha-wrap { padding: 29px 16px 42px; }
   .cz-title { font-size: 34px; }
   .cz-chips { margin-bottom: 22px; }
@@ -350,36 +359,7 @@ body:has(#screen-cozinha.active) .nav-tab.active::after { background: var(--red)
   .cz-icon { font-size: 48px; margin-top: 21px; }
   .cz-lbl { margin-left: 80px; font-size: 23px; }
   .cz-time { margin-left: 83px; font-size: 17px; }
-  .facial-wrap { padding: 18px 12px 32px; }
-  .facial-main { min-height: 0; padding: 18px 13px 28px; border-radius: 13px; }
-  .mc-name { font-size: 21px; }
-  .mc-time, .mc-dur { font-size: 14px; }
-  .btn-ambas { width: 100%; min-height: 62px; }
-  .ambas-icons { display: inline; margin: 0 8px 0 0; font-size: 21px; }
-  .ambas-label { display: inline; font-size: 15px; }
-  .ambas-check { position: static; display: inline-grid; margin: 0 0 0 7px; }
-  .btn-confirm { width: 100%; min-width: 0; min-height: 56px; font-size: 18px; }
-  .coord-wrap { padding: 35px 16px 48px; }
-  .coord-top { gap: 18px; flex-direction: column; }
-  .coord-title { font-size: 39px; }
-  .coord-date { font-size: 16px; }
-  .btn-excecao { margin: 0; font-size: 15px; }
-  .stats-row { grid-template-columns: 1fr; gap: 17px; }
-  .stat-box { min-height: 138px; }
-  .student-row { padding: 11px; gap: 9px; flex-wrap: wrap; }
-  .s-name { font-size: 17px; }
-  .meal-badges { order: 3; width: 100%; }
-  .mbadge { flex: 1; padding: 7px; font-size: 13px; text-align: center; }
-  .act-btn { font-size: 14px; }
-  .cozinha-wrap { padding: 29px 16px 42px; }
-  .cz-title { font-size: 34px; }
-  .cz-chips { margin-bottom: 22px; }
-  .cz-cards { grid-template-columns: 1fr; gap: 17px; margin-top: 20px; }
-  .cz-card { min-height: 290px; border-width: 9px; border-radius: 34px; }
-  .cz-num { font-size: 94px; }
-  .cz-icon { font-size: 48px; margin-top: 21px; }
-  .cz-lbl { margin-left: 80px; font-size: 23px; }
-  .cz-time { margin-left: 83px; font-size: 17px; }
+
   .facial-wrap { padding: 18px 12px 32px; }
   .facial-main { min-height: 0; padding: 18px 13px 28px; border-radius: 13px; }
   .cam-controls { gap: 8px; }
@@ -388,6 +368,30 @@ body:has(#screen-cozinha.active) .nav-tab.active::after { background: var(--red)
   .cam-idle-icon { font-size: 64px; }
   .cam-msg { font-size: 13px; }
   .fs-text { font-size: 16px; text-align: center; }
+}
+
+/* Telas muito estreitas (320–375px) */
+@media (max-width: 375px) {
+  .login-right { padding: 26px 14px; }
+  .login-card { padding: 30px 16px; border-radius: 22px; }
+  .lc-title { font-size: 28px; }
+  .lc-sub { font-size: 13px; }
+  .role-row { gap: 5px; }
+  .role-btn { font-size: 11px; padding: 6px; }
+  .field-inp { height: 48px; font-size: 14px; }
+  .meal-card { grid-template-columns: 40% 1fr; height: 178px; min-height: 178px; }
+  .mc-icon { height: 140px; min-height: 140px; }
+  .mbadge { font-size: 12px; padding: 6px; }
+  .coord-title { font-size: 34px; }
+  .cz-lbl { margin-left: 64px; font-size: 20px; }
+  .cz-time { margin-left: 66px; font-size: 15px; }
+}
+
+/* Tablet (761–900px): garante que o card de login não estoure */
+@media (min-width: 761px) and (max-width: 900px) {
+  .login-right { padding: 36px 30px; }
+  .login-card { padding: 36px 26px; }
+  .role-row { gap: 8px; }
 }
 
 /* ══════════════════════════════════════════════════════════

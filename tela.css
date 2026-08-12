@@ -20,7 +20,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
 .hidden { display: none !important; }
 
 @keyframes fadeUp   { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
@@ -287,3 +287,49 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 }
 .toast.success { background: var(--primary); color: #fff; }
 .toast.error   { background: var(--red); color: #fff; }
+
+/* ── RESPONSIVIDADE ──────────────────────────────────── */
+@media (max-width: 760px) {
+  .header-inner { padding: 12px 16px; gap: 10px; flex-wrap: wrap; }
+  .brand-name { font-size: 17px; }
+  .brand-sub { font-size: 10px; }
+  .header-actions { gap: 8px; margin-left: auto; }
+  .header-user { display: none; }
+  .btn-voltar { padding: 7px 11px; font-size: 12px; }
+
+  .tabs-wrap { top: 57px; }
+  .tabs { padding: 0 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tab { padding: 12px 14px; font-size: 13px; flex-shrink: 0; }
+
+  .main { padding: 20px 14px 44px; }
+  .card { padding: 22px 16px; border-radius: 16px; }
+  .card-title { font-size: 19px; }
+  .panel-grid { gap: 14px; }
+
+  .perfil-row { grid-template-columns: 1fr; gap: 8px; }
+  .perfil-btn { padding: 12px 14px; }
+  .perfil-icon { font-size: 22px; margin-bottom: 4px; }
+
+  .inp-row { flex-direction: column; gap: 8px; }
+  .btn-gerar { width: 100%; padding: 11px; }
+
+  .lista-top { flex-direction: column; }
+  .search-inp, .filter-select { width: 100%; }
+  .lista-filters { width: 100%; }
+
+  .table-wrap { margin: 0 -4px; padding: 0 4px; }
+  .alunos-table th, .alunos-table td { padding: 10px 10px; font-size: 13px; }
+
+  .modal-box { padding: 32px 22px; }
+  .modal-btns { flex-direction: column; }
+}
+
+@media (max-width: 375px) {
+  .tab { font-size: 12px; padding: 11px 10px; }
+  .card { padding: 18px 13px; }
+  .scb-num { font-size: 58px; }
+  .alunos-table th:nth-child(1),
+  .alunos-table td:nth-child(1),
+  .alunos-table th:nth-child(4),
+  .alunos-table td:nth-child(4) { display: none; }
+}
