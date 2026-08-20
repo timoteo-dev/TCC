@@ -1,0 +1,14 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+dist/
+build/
+
+# VS Code / OS
+.DS_Store
+Thumbs.db
+.vscode/

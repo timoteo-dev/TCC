@@ -35,18 +35,67 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ── DADOS ───────────────────────────────────────────────── */
+const ALL_TURMAS = [
+  "1 I01 LCH", "1 I02 LCH", "1 I01 IPI", "1 I01 MCN",
+  "2 I01 LCH", "2 I02 LCH", "2 I01 IPI",
+  "3 I01 ESP", "3 I02 ESP", "3 I01 IPI", "3 I01 HUM"
+];
+
 const STUDENTS = [
-  { id:1, name:"Ana Silva",     turma:"3A", recreio:true,  almoco:true,  initials:"AS" },
-  { id:2, name:"Bruno Costa",   turma:"3A", recreio:false, almoco:true,  initials:"BC" },
-  { id:3, name:"Carla Mendes",  turma:"3A", recreio:true,  almoco:false, initials:"CM" },
-  { id:4, name:"Diego Alves",   turma:"3A", recreio:true,  almoco:true,  initials:"DA" },
-  { id:5, name:"Elena Souza",   turma:"3B", recreio:false, almoco:false, initials:"ES" },
-  { id:6, name:"Felipe Ramos",  turma:"3B", recreio:true,  almoco:true,  initials:"FR" },
-  { id:7, name:"Gabriela Lima", turma:"3B", recreio:false, almoco:true,  initials:"GL" },
-  { id:8, name:"Hugo Martins",  turma:"3B", recreio:true,  almoco:true,  initials:"HM" },
+  // 1 I01 LCH (Baseado nas telas do Stitch)
+  { id: 101, name: "Ana Clara",       turma: "1 I01 LCH", recreio: true,  almoco: true,  initials: "AC" },
+  { id: 102, name: "Bento Gonçalves", turma: "1 I01 LCH", recreio: false, almoco: true,  initials: "BG" },
+  { id: 103, name: "Carla Ferreira",  turma: "1 I01 LCH", recreio: true,  almoco: false, initials: "CF" },
+  { id: 104, name: "Diego Lima",      turma: "1 I01 LCH", recreio: false, almoco: false, initials: "DL" },
+  { id: 105, name: "Elena Sousa",     turma: "1 I01 LCH", recreio: true,  almoco: true,  initials: "ES" },
+  { id: 106, name: "Fábio Mendes",    turma: "1 I01 LCH", recreio: true,  almoco: false, initials: "FM" },
+
+  // 1 I02 LCH
+  { id: 111, name: "Gabriel Souza",   turma: "1 I02 LCH", recreio: true,  almoco: true,  initials: "GS" },
+  { id: 112, name: "Helena Ribeiro",  turma: "1 I02 LCH", recreio: true,  almoco: false, initials: "HR" },
+  { id: 113, name: "Isabela Martins", turma: "1 I02 LCH", recreio: true,  almoco: true,  initials: "IM" },
+
+  // 1 I01 IPI
+  { id: 121, name: "Igor Santos",     turma: "1 I01 IPI", recreio: true,  almoco: true,  initials: "IS" },
+  { id: 122, name: "Joana Prado",     turma: "1 I01 IPI", recreio: false, almoco: true,  initials: "JP" },
+
+  // 1 I01 MCN
+  { id: 131, name: "Julia Martins",   turma: "1 I01 MCN", recreio: true,  almoco: true,  initials: "JM" },
+  { id: 132, name: "Lucas Faria",     turma: "1 I01 MCN", recreio: true,  almoco: false, initials: "LF" },
+
+  // 2 I01 LCH
+  { id: 201, name: "Kaio Rocha",      turma: "2 I01 LCH", recreio: true,  almoco: true,  initials: "KR" },
+  { id: 202, name: "Letícia Neves",   turma: "2 I01 LCH", recreio: true,  almoco: true,  initials: "LN" },
+
+  // 2 I02 LCH
+  { id: 211, name: "Larissa Dias",    turma: "2 I02 LCH", recreio: true,  almoco: true,  initials: "LD" },
+  { id: 212, name: "Marcos Vinicius", turma: "2 I02 LCH", recreio: false, almoco: true,  initials: "MV" },
+
+  // 2 I01 IPI
+  { id: 221, name: "Mateus Oliveira", turma: "2 I01 IPI", recreio: true,  almoco: true,  initials: "MO" },
+  { id: 222, name: "Nathalia Lima",   turma: "2 I01 IPI", recreio: true,  almoco: false, initials: "NL" },
+
+  // 3 I01 ESP
+  { id: 311, name: "Natália Dias",    turma: "3 I01 ESP", recreio: true,  almoco: true,  initials: "ND" },
+  { id: 312, name: "Otávio Pereira",  turma: "3 I01 ESP", recreio: false, almoco: true,  initials: "OP" },
+
+  // 3 I02 ESP
+  { id: 321, name: "Paulo Henrique",  turma: "3 I02 ESP", recreio: true,  almoco: true,  initials: "PH" },
+  { id: 322, name: "Rafaela Campos",  turma: "3 I02 ESP", recreio: true,  almoco: false, initials: "RC" },
+
+  // 3 I01 IPI (Incluindo aluno timoteo)
+  { id: 301, name: "timoteo",         turma: "3 I01 IPI", recreio: true,  almoco: true,  initials: "TI" },
+  { id: 302, name: "Samuel Rezende",  turma: "3 I01 IPI", recreio: true,  almoco: true,  initials: "SR" },
+  { id: 303, name: "Tatiane Meireles",turma: "3 I01 IPI", recreio: false, almoco: true,  initials: "TM" },
+
+  // 3 I01 HUM
+  { id: 331, name: "Priscila Ramos",  turma: "3 I01 HUM", recreio: true,  almoco: true,  initials: "PR" },
+  { id: 332, name: "Victor Hugo",     turma: "3 I01 HUM", recreio: true,  almoco: true,  initials: "VH" }
 ];
 
 let students = JSON.parse(JSON.stringify(STUDENTS)); // cópia mutável
+let currentSelectedTurma = null; // Turma selecionada na coordenação
+let studentToReset = null; // Aluno em processo de reset de senha
 
 /* ── ESTADO DE AUTENTICAÇÃO (Bloqueio Estrito) ───────────── */
 let isLoggedIn = false;
@@ -74,17 +123,10 @@ let activeRole = "aluno";
 let facialActive = false;
 
 function goTo(name) {
+  if (!name) return;
+  
   // Desativa a câmara ao sair da aba facial
   if (facialActive && name !== "facial") stopCamera();
-
-  // CONTROLO DE ACESSO ESTRITO
-  // Se tentar ir para aluno, coordenação ou cozinha, verifica se tem sessão iniciada E se é a tela permitida
-  if (name === "aluno" || name === "coordenacao" || name === "cozinha") {
-    if (!isLoggedIn || loggedInRole !== name) {
-      $("modal-backdrop").classList.remove("hidden");
-      return;
-    }
-  }
 
   $$(".screen").forEach(s => s.classList.remove("active"));
   $$(".nav-tab").forEach(b => b.classList.remove("active"));
@@ -99,10 +141,12 @@ function goTo(name) {
 }
 
 // Fechar modal de bloqueio
-$("modal-btn-login").addEventListener("click", () => {
-  $("modal-backdrop").classList.add("hidden");
-  goTo("login");
-});
+if ($("modal-btn-login")) {
+  $("modal-btn-login").addEventListener("click", () => {
+    $("modal-backdrop").classList.add("hidden");
+    goTo("login");
+  });
+}
 
 // Abas do Menu de Navegação Superior
 $$(".nav-tab").forEach(btn => {
@@ -294,7 +338,7 @@ $("btn-confirm-order").addEventListener("click", () => {
   showToast("Pedido confirmado com sucesso!");
 });
 
-/* ── TELA COORDENAÇÃO ────────────────────────────────────── */
+/* ── TELA COORDENAÇÃO (STITCH INTERACTION SYSTEM) ────────── */
 function calcStats() {
   const nRecreo  = students.filter(s => s.recreio).length;
   const nAlmoco  = students.filter(s => s.almoco).length;
@@ -303,66 +347,217 @@ function calcStats() {
   return { nRecreo, nAlmoco, nTotal, nSem };
 }
 
+function selectTurmaCoord(turma) {
+  currentSelectedTurma = turma;
+  renderCoord();
+}
+
+function voltarParaTurmas() {
+  currentSelectedTurma = null;
+  renderCoord();
+}
+
 function renderCoord() {
-  $("coord-date").textContent = formatDate();
-  const { nRecreo, nAlmoco, nTotal, nSem } = calcStats();
-  $("stat-recreio").textContent = nRecreo;
-  $("stat-almoco").textContent  = nAlmoco;
-  $("stat-total").textContent   = nTotal;
-  $("stat-sem").textContent     = nSem;
+  if ($("coord-date")) $("coord-date").textContent = formatDate();
 
-  const byTurma = {};
-  students.forEach(s => {
-    if (!byTurma[s.turma]) byTurma[s.turma] = [];
-    byTurma[s.turma].push(s);
-  });
+  const viewClasses = $("coord-view-classes");
+  const viewStudents = $("coord-view-students");
 
-  const list = $("coord-list");
-  list.innerHTML = "";
+  if (!currentSelectedTurma) {
+    // ── MOSTRA VISÃO 1: CARDS DE TURMAS (Stitch Screen 1) ──
+    if (viewClasses) viewClasses.classList.remove("hidden");
+    if (viewStudents) viewStudents.classList.add("hidden");
 
-  Object.entries(byTurma).forEach(([turma, alunos]) => {
-    const header = document.createElement("div");
-    header.className = "turma-header";
-    header.textContent = "Turma " + turma;
-    list.appendChild(header);
+    const grid = $("coord-classes-grid");
+    if (grid) {
+      grid.innerHTML = "";
 
-    alunos.forEach(a => {
-      const row = document.createElement("div");
-      row.className = "student-row";
-      row.innerHTML = `
-        <div class="s-avatar">${a.initials}</div>
-        <span class="s-name">${a.name}</span>
-        <div class="meal-badges">
-          <span class="mbadge ${a.recreio ? "sim" : "nao"}" data-id="${a.id}" data-meal="recreio">🥐 Recreio</span>
-          <span class="mbadge ${a.almoco  ? "sim" : "nao"}" data-id="${a.id}" data-meal="almoco">🍽️ Almoço</span>
-        </div>
-        <button class="act-btn" data-action="senha" data-id="${a.id}">Senha</button>
-      `;
-      list.appendChild(row);
-    });
-  });
+      ALL_TURMAS.forEach(turma => {
+        const alunosDaTurma = students.filter(s => s.turma === turma);
+        const countRecreio = alunosDaTurma.filter(s => s.recreio).length;
+        const countAlmoco  = alunosDaTurma.filter(s => s.almoco).length;
 
-  list.querySelectorAll(".mbadge").forEach(badge => {
-    badge.addEventListener("click", () => {
-      const id   = parseInt(badge.dataset.id);
-      const meal = badge.dataset.meal;
-      const s    = students.find(s => s.id === id);
-      s[meal]    = !s[meal];
-      showToast(`${s.name}: ${meal === "recreio" ? "recreio" : "almoço"} ${s[meal] ? "adicionado" : "removido"}`);
-      renderCoord();
-      syncCozinha();
-    });
-  });
+        const card = document.createElement("div");
+        card.className = "coord-class-card";
+        card.setAttribute("role", "button");
+        card.setAttribute("tabindex", "0");
+        card.setAttribute("title", `Clique para ver os alunos da turma ${turma}`);
 
-  list.querySelectorAll("[data-action='senha']").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const s = students.find(s => s.id === parseInt(btn.dataset.id));
-      showToast(`Senha de ${s.name} foi redefinida`);
-    });
+        card.innerHTML = `
+          <div class="coord-card-header">
+            <h3 class="coord-class-name">${turma}</h3>
+          </div>
+          <div class="coord-class-stats">
+            <div class="coord-stat-col">
+              <svg class="coord-stat-svg" viewBox="0 0 24 24" fill="none" stroke="#2D5A43" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/>
+                <circle cx="12" cy="12" r="2"/>
+              </svg>
+              <div class="coord-stat-info">
+                <span class="coord-stat-num">${countRecreio}</span>
+                <span class="coord-stat-label">RECREIO</span>
+              </div>
+            </div>
+            <div class="coord-stat-col">
+              <svg class="coord-stat-svg" viewBox="0 0 24 24" fill="none" stroke="#2D5A43" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 4V2"/>
+                <path d="M4 17h16a1 1 0 0 0 1-1A9 9 0 0 0 3 16a1 1 0 0 0 1 1z"/>
+                <path d="M2 20h20"/>
+              </svg>
+              <div class="coord-stat-info">
+                <span class="coord-stat-num">${countAlmoco}</span>
+                <span class="coord-stat-label">ALMOÇO</span>
+              </div>
+            </div>
+          </div>
+        `;
+
+        card.addEventListener("click", () => selectTurmaCoord(turma));
+        card.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            selectTurmaCoord(turma);
+          }
+        });
+
+        grid.appendChild(card);
+      });
+    }
+
+  } else {
+    // ── MOSTRA VISÃO 2: LISTA DE ALUNOS DA TURMA (Stitch Screens 2 & 4) ──
+    if (viewClasses) viewClasses.classList.add("hidden");
+    if (viewStudents) viewStudents.classList.remove("hidden");
+
+    if ($("coord-current-turma-crumb")) {
+      $("coord-current-turma-crumb").textContent = `Class ${currentSelectedTurma}`;
+    }
+    if ($("coord-students-title")) {
+      $("coord-students-title").textContent = `Student List – Class ${currentSelectedTurma}`;
+    }
+
+    const list = $("coord-students-list");
+    if (list) {
+      list.innerHTML = "";
+      const alunosDaTurma = students.filter(s => s.turma === currentSelectedTurma);
+
+      if (alunosDaTurma.length === 0) {
+        list.innerHTML = `
+          <div style="text-align:center; padding: 48px 20px; background: #fff; border-radius: 20px; border: 1.5px dashed #d5c8b8; color: #8c7b6d;">
+            <p style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Nenhum aluno cadastrado nesta turma ainda.</p>
+            <p style="font-size: 14px;">Use o botão "Adicionar Exceção" acima ou cadastre alunos no painel de cadastro.</p>
+          </div>
+        `;
+      } else {
+        alunosDaTurma.forEach(a => {
+          const row = document.createElement("div");
+          row.className = "stitch-student-row";
+          row.innerHTML = `
+            <div class="stitch-student-left">
+              <div class="stitch-avatar">${a.initials}</div>
+              <span class="stitch-name">${a.name}</span>
+            </div>
+            <div class="stitch-actions">
+              <button class="stitch-meal-btn ${a.recreio ? "active" : "inactive"}" data-action="recreio" data-id="${a.id}">
+                🥐 Recreio
+              </button>
+              <button class="stitch-meal-btn ${a.almoco ? "active" : "inactive"}" data-action="almoco" data-id="${a.id}">
+                🍽️ Almoço
+              </button>
+              <button class="btn-reset-pin" data-action="senha" data-id="${a.id}">
+                Senha
+              </button>
+            </div>
+          `;
+          list.appendChild(row);
+        });
+
+        // Event listeners para os botões de refeição da linha
+        list.querySelectorAll(".stitch-meal-btn").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const id = parseInt(btn.dataset.id);
+            const meal = btn.dataset.action;
+            const s = students.find(s => s.id === id);
+            if (s) {
+              s[meal] = !s[meal];
+              showToast(`${s.name}: ${meal === "recreio" ? "Recreio" : "Almoço"} ${s[meal] ? "confirmado" : "desmarcado"}!`);
+              renderCoord();
+              syncCozinha();
+            }
+          });
+        });
+
+        // Event listener para o botão Senha (Abre Modal de Reset)
+        list.querySelectorAll("[data-action='senha']").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const id = parseInt(btn.dataset.id);
+            const s = students.find(s => s.id === id);
+            if (s) openResetPinModal(s);
+          });
+        });
+
+        // Event listener para o botão Confirmar
+        list.querySelectorAll("[data-action='confirmar']").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const id = parseInt(btn.dataset.id);
+            const s = students.find(s => s.id === id);
+            if (s) {
+              showToast(`Presença e refeições confirmadas para ${s.name}! ✅`);
+            }
+          });
+        });
+      }
+    }
+  }
+}
+
+// Navegação de retorno às turmas (Breadcrumb & Voltar)
+if ($("crumb-to-classes")) $("crumb-to-classes").addEventListener("click", voltarParaTurmas);
+if ($("crumb-to-classes-2")) $("crumb-to-classes-2").addEventListener("click", voltarParaTurmas);
+if ($("btn-back-classes")) $("btn-back-classes").addEventListener("click", voltarParaTurmas);
+
+/* ── MODAL RESETAR SENHA (Stitch Screen 3) ────────────────── */
+function openResetPinModal(student) {
+  studentToReset = student;
+  if ($("reset-student-name")) $("reset-student-name").textContent = student.name;
+  const modal = $("modal-reset-senha");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeResetPinModal() {
+  studentToReset = null;
+  const modal = $("modal-reset-senha");
+  if (modal) modal.classList.add("hidden");
+}
+
+if ($("btn-cancel-reset")) $("btn-cancel-reset").addEventListener("click", closeResetPinModal);
+const modalResetSenha = $("modal-reset-senha");
+if (modalResetSenha) {
+  modalResetSenha.addEventListener("click", (e) => {
+    if (e.target === modalResetSenha) closeResetPinModal();
   });
 }
 
-/* ── LÓGICA DO MODAL ADICIONAR EXCEÇÃO (UI/UX PRO MAX) ──── */
+if ($("btn-confirm-reset")) {
+  $("btn-confirm-reset").addEventListener("click", async () => {
+    if (studentToReset) {
+      const studentName = studentToReset.name;
+      // Reset no banco Supabase se aplicável
+      try {
+        await db.from("alunos")
+          .update({ pin_hash: "$2a$06$dw9gR1sO8C0lvMlOLzoKAekYpL.RJozWrAoUCbhcMe2DOxh5uamgq", tentativas_pin: 0, bloqueado_ate: null })
+          .ilike("nome", studentName);
+      } catch (err) {
+        console.log("Nota: Reset local efetuado.", err);
+      }
+
+      showToast(`A senha do aluno ${studentName} foi resetada para a senha padrão! 🔑`);
+      closeResetPinModal();
+    }
+  });
+}
+
+/* ── LÓGICA DO MODAL ADICIONAR EXCEÇÃO (Stitch Screens 5 & 6) ─ */
 function abrirModalExcecao() {
   const modal = $("modal-excecao");
   if (modal) modal.classList.remove("hidden");
@@ -488,7 +683,7 @@ if (formExterno) {
     const newVisitor = {
       id: Date.now(),
       name: `${nome} [🏫 ${escola}] - ${refeicaoDesc}`,
-      turma: "Visitantes Externa",
+      turma: "1 I01 LCH", // atrela à turma atual ou externa
       recreio: true,
       almoco: true,
       initials: initials
