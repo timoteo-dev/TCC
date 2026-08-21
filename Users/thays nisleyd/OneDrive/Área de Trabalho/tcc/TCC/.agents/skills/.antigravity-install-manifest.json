@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-07-29T00:05:25.062Z",
+  "updatedAt": "2026-08-21T16:20:00.000Z",
   "entries": [
     "docs",
-    "ui-ux-pro-max"
+    "ui-ux-pro-max",
+    "full-stack-orchestration-full-stack-feature",
+    "code-review",
+    "supabase",
+    "supabase-postgres-best-practices"
   ]
 }

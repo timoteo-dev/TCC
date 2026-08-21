@@ -47,61 +47,43 @@ const ALL_TURMAS = [
   "3 I01 ESP", "3 I02 ESP", "3 I01 IPI", "3 I01 HUM"
 ];
 
-const STUDENTS = [
-  // 1 I01 LCH (Baseado nas telas do Stitch)
-  { id: 101, name: "Ana Clara",       turma: "1 I01 LCH", recreio: true,  almoco: true,  initials: "AC" },
-  { id: 102, name: "Bento Gonçalves", turma: "1 I01 LCH", recreio: false, almoco: true,  initials: "BG" },
-  { id: 103, name: "Carla Ferreira",  turma: "1 I01 LCH", recreio: true,  almoco: false, initials: "CF" },
-  { id: 104, name: "Diego Lima",      turma: "1 I01 LCH", recreio: false, almoco: false, initials: "DL" },
-  { id: 105, name: "Elena Sousa",     turma: "1 I01 LCH", recreio: true,  almoco: true,  initials: "ES" },
-  { id: 106, name: "Fábio Mendes",    turma: "1 I01 LCH", recreio: true,  almoco: false, initials: "FM" },
-
-  // 1 I02 LCH
-  { id: 111, name: "Gabriel Souza",   turma: "1 I02 LCH", recreio: true,  almoco: true,  initials: "GS" },
-  { id: 112, name: "Helena Ribeiro",  turma: "1 I02 LCH", recreio: true,  almoco: false, initials: "HR" },
-  { id: 113, name: "Isabela Martins", turma: "1 I02 LCH", recreio: true,  almoco: true,  initials: "IM" },
-
-  // 1 I01 IPI
-  { id: 121, name: "Igor Santos",     turma: "1 I01 IPI", recreio: true,  almoco: true,  initials: "IS" },
-  { id: 122, name: "Joana Prado",     turma: "1 I01 IPI", recreio: false, almoco: true,  initials: "JP" },
-
-  // 1 I01 MCN
-  { id: 131, name: "Julia Martins",   turma: "1 I01 MCN", recreio: true,  almoco: true,  initials: "JM" },
-  { id: 132, name: "Lucas Faria",     turma: "1 I01 MCN", recreio: true,  almoco: false, initials: "LF" },
-
-  // 2 I01 LCH
-  { id: 201, name: "Kaio Rocha",      turma: "2 I01 LCH", recreio: true,  almoco: true,  initials: "KR" },
-  { id: 202, name: "Letícia Neves",   turma: "2 I01 LCH", recreio: true,  almoco: true,  initials: "LN" },
-
-  // 2 I02 LCH
-  { id: 211, name: "Larissa Dias",    turma: "2 I02 LCH", recreio: true,  almoco: true,  initials: "LD" },
-  { id: 212, name: "Marcos Vinicius", turma: "2 I02 LCH", recreio: false, almoco: true,  initials: "MV" },
-
-  // 2 I01 IPI
-  { id: 221, name: "Mateus Oliveira", turma: "2 I01 IPI", recreio: true,  almoco: true,  initials: "MO" },
-  { id: 222, name: "Nathalia Lima",   turma: "2 I01 IPI", recreio: true,  almoco: false, initials: "NL" },
-
-  // 3 I01 ESP
-  { id: 311, name: "Natália Dias",    turma: "3 I01 ESP", recreio: true,  almoco: true,  initials: "ND" },
-  { id: 312, name: "Otávio Pereira",  turma: "3 I01 ESP", recreio: false, almoco: true,  initials: "OP" },
-
-  // 3 I02 ESP
-  { id: 321, name: "Paulo Henrique",  turma: "3 I02 ESP", recreio: true,  almoco: true,  initials: "PH" },
-  { id: 322, name: "Rafaela Campos",  turma: "3 I02 ESP", recreio: true,  almoco: false, initials: "RC" },
-
-  // 3 I01 IPI (Incluindo aluno timoteo)
-  { id: 301, name: "timoteo",         turma: "3 I01 IPI", recreio: true,  almoco: true,  initials: "TI" },
-  { id: 302, name: "Samuel Rezende",  turma: "3 I01 IPI", recreio: true,  almoco: true,  initials: "SR" },
-  { id: 303, name: "Tatiane Meireles",turma: "3 I01 IPI", recreio: false, almoco: true,  initials: "TM" },
-
-  // 3 I01 HUM
-  { id: 331, name: "Priscila Ramos",  turma: "3 I01 HUM", recreio: true,  almoco: true,  initials: "PR" },
-  { id: 332, name: "Victor Hugo",     turma: "3 I01 HUM", recreio: true,  almoco: true,  initials: "VH" }
-];
-
-let students = JSON.parse(JSON.stringify(STUDENTS)); // cópia mutável
+let students = []; // carregado do Supabase
 let currentSelectedTurma = null; // Turma selecionada na coordenação
 let studentToReset = null; // Aluno em processo de reset de senha
+let currentAlunoId = null; // Guarda o ID do aluno logado
+
+async function carregarAlunos() {
+  const { data, error } = await db.from('alunos').select(`
+    id,
+    nome,
+    turma_id,
+    turmas(nome)
+  `);
+  if (!error && data) {
+    const existingOrders = {};
+    students.forEach(s => {
+      existingOrders[s.id] = { recreio: s.recreio, almoco: s.almoco };
+    });
+
+    students = data.map(al => {
+      const parts = al.nome.trim().split(" ");
+      let initials = parts[0] ? parts[0][0] : "";
+      if (parts.length > 1) initials += parts[parts.length - 1][0];
+      initials = initials.toUpperCase();
+      
+      const prev = existingOrders[al.id] || { recreio: false, almoco: false };
+
+      return {
+        id: al.id,
+        name: al.nome,
+        turma: al.turmas ? al.turmas.nome : "",
+        recreio: prev.recreio,
+        almoco: prev.almoco,
+        initials: initials
+      };
+    });
+  }
+}
 
 /* ── ESTADO DE AUTENTICAÇÃO (Bloqueio Estrito) ───────────── */
 let isLoggedIn = false;
@@ -131,6 +113,23 @@ let facialActive = false;
 function goTo(name) {
   if (!name) return;
   
+  const isProtected = ["aluno", "coordenacao", "cozinha"].includes(name);
+  if (isProtected) {
+    if (!isLoggedIn) {
+      $("modal-backdrop").classList.remove("hidden");
+      return;
+    }
+    // Proteção rigorosa baseada no papel logado
+    if (name === "aluno" && loggedInRole !== "aluno") {
+      $("modal-backdrop").classList.remove("hidden");
+      return;
+    }
+    if ((name === "coordenacao" || name === "cozinha") && loggedInRole === "aluno") {
+      $("modal-backdrop").classList.remove("hidden");
+      return;
+    }
+  }
+
   // Desativa a câmara ao sair da aba facial
   if (facialActive && name !== "facial") stopCamera();
 
@@ -142,8 +141,11 @@ function goTo(name) {
   if (sc) sc.classList.add("active");
   if (bt) bt.classList.add("active");
 
-  if (name === "coordenacao") renderCoord();
-  if (name === "cozinha")     renderCozinha();
+  if (name === "coordenacao") {
+    carregarAlunos().then(() => renderCoord());
+  } else if (name === "cozinha") {
+    carregarAlunos().then(() => renderCozinha());
+  }
 }
 
 // Fechar modal de bloqueio
@@ -151,6 +153,12 @@ if ($("modal-btn-login")) {
   $("modal-btn-login").addEventListener("click", () => {
     $("modal-backdrop").classList.add("hidden");
     goTo("login");
+  });
+}
+
+if ($("btn-close-auth-modal")) {
+  $("btn-close-auth-modal").addEventListener("click", () => {
+    $("modal-backdrop").classList.add("hidden");
   });
 }
 
@@ -217,6 +225,7 @@ $("btn-login").addEventListener("click", async () => {
     });
 
     const aluno = data[0];
+    currentAlunoId = aluno.id;
     $("aluno-nome-display").textContent = aluno.nome;
     const nameParts = aluno.nome.split(" ");
     let initials = nameParts[0][0];
@@ -351,6 +360,25 @@ $("btn-confirm-order").addEventListener("click", () => {
 
   $("aluno-order-section").classList.add("hidden");
   $("aluno-confirmed").classList.remove("hidden");
+
+  // Salvar no estado local para que Coordenação/Cozinha veja (simulação)
+  if (currentAlunoId) {
+    const s = students.find(x => x.id === currentAlunoId);
+    if (s) {
+      s.recreio = selectedMeals.recreio;
+      s.almoco = selectedMeals.almoco;
+    }
+    
+    // Tenta persistir no Supabase (ignoramos erro se tabela não estiver exposta/RLS restrito)
+    db.from('pedidos').insert([{
+      aluno_id: currentAlunoId,
+      recreio: selectedMeals.recreio,
+      almoco: selectedMeals.almoco,
+      data_pedido: new Date().toISOString().split('T')[0]
+    }]).then(res => {
+       if (res.error) console.log("Aviso (Supabase):", res.error.message);
+    });
+  }
 
   const tags = $("confirmed-tags");
   tags.innerHTML = "";
@@ -1096,6 +1124,7 @@ if ($("form-cadastro-aluno")) {
       p_turma_id: turmaId,
       p_matricula: matricula,
       p_pin: senha,
+      p_consentimento: true
     });
 
     if (btnTxt) btnTxt.classList.remove("hidden");
@@ -1103,7 +1132,7 @@ if ($("form-cadastro-aluno")) {
     if (btnSubmit) btnSubmit.disabled = false;
 
     if (error) {
-      errEl.textContent = "Erro ao salvar. Verifique se você está logado como Coordenação/Secretaria.";
+      errEl.textContent = `Erro ao salvar: ${error.message || "Verifique as permissões."}`;
       errEl.classList.remove("hidden");
       console.log(error);
       return;

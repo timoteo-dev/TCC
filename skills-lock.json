@@ -1,11 +1,29 @@
 {
   "version": 1,
   "skills": {
+    "code-review": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "engineering/skills/code-review/SKILL.md",
+      "computedHash": "2b1ac29c8d03ecdd6dbb9d0ebc8cdb05965151bedceed36f262546785b3123bc"
+    },
     "higgsfield-generate": {
       "source": "higgsfield-ai/skills",
       "sourceType": "github",
       "skillPath": "higgsfield-generate/SKILL.md",
       "computedHash": "0e5835e966fcf3a5f3fbbd6e8ec236dc68e7a5444dcf8354e7f3f3d050dac1e0"
+    },
+    "supabase": {
+      "source": "supabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/supabase/SKILL.md",
+      "computedHash": "a6260582f48df8ba53380bb9b9e870ed2ae5fe147799e90ed783b8aa25167d50"
+    },
+    "supabase-postgres-best-practices": {
+      "source": "supabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
+      "computedHash": "128fac78002d916c8ca908245d398e634f540d8bcf20915b2b2359aeb18eba59"
     }
   }
 }
