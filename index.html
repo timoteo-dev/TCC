@@ -98,12 +98,7 @@
 
           <button class="btn-enter" id="btn-login">Entrar no sistema →</button>
 
-          <div style="margin-top: 24px; text-align: center; border-top: 1px solid var(--border); padding-top: 20px;">
-            <p style="font-size: 14px; color: var(--muted); margin-bottom: 12px;">Ainda não tem cadastro?</p>
-            <button type="button" onclick="document.getElementById('modal-iframe-cadastro').classList.remove('hidden')" style="width: 100%; padding: 14px; background: transparent; border: 2px solid var(--primary); color: var(--primary); font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; border-radius: 12px; cursor: pointer; transition: all 0.2s;">
-              Fazer Cadastro Primeiro
-            </button>
-          </div>
+
 
         </div>
       </div>
@@ -191,7 +186,10 @@
             <h2 class="coord-title">Painel de Coordenação</h2>
             <p class="coord-date" id="coord-date"></p>
           </div>
-          <button class="btn-excecao" id="btn-add-excecao">Adicionar Exceção</button>
+          <div style="display: flex; gap: 12px;">
+            <button class="btn-excecao" id="btn-cadastrar-aluno" style="background: transparent; color: #DF8235; border: 2px solid #DF8235;">Cadastrar Aluno</button>
+            <button class="btn-excecao" id="btn-add-excecao">Adicionar Exceção</button>
+          </div>
         </div>
 
         <div class="coord-classes-grid" id="coord-classes-grid">
@@ -420,33 +418,47 @@
 
   <div class="toast hidden" id="toast"></div>
 
-  <style>
-    .modal-iframe-wrapper {
-      position: fixed; 
-      top: 0; 
-      left: 0; 
-      width: 100vw; 
-      height: 100vh;
-      background: rgba(0,0,0,0.6); 
-      z-index: 9999;
-      display: flex; 
-      align-items: center; 
-      justify-content: center;
-    }
-    .modal-iframe-wrapper.hidden {
-      display: none !important;
-    }
-  </style>
-
-  <div id="modal-iframe-cadastro" class="modal-iframe-wrapper hidden">
-    <div style="background: var(--bg); width: 95%; max-width: 1100px; height: 90vh; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+  <!-- Modal Cadastrar Aluno -->
+  <div class="modal-backdrop hidden" id="modal-cadastro-aluno">
+    <div class="modal-box excecao-modal-box">
+      <button class="excecao-modal-close" id="btn-close-cadastro-aluno" type="button" aria-label="Fechar modal">&times;</button>
       
-      <div style="padding: 16px 24px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-        <h3 style="font-family: 'Fraunces', serif; font-size: 20px; color: var(--text); margin: 0;">Realizar Cadastro</h3>
-        <button onclick="document.getElementById('modal-iframe-cadastro').classList.add('hidden')" style="background: none; border: none; font-size: 28px; cursor: pointer; color: var(--muted); line-height: 1;">&times;</button>
+      <div class="excecao-header">
+        <h3 class="excecao-title">Cadastrar Aluno</h3>
+        <p class="excecao-sub">Crie um novo acesso de aluno para o sistema de merenda.</p>
       </div>
-      
-      <iframe src="tela.html" style="width: 100%; height: 100%; border: none;"></iframe>
+
+      <form id="form-cadastro-aluno" class="excecao-form">
+        <div class="field-group">
+          <label class="field-lbl" for="cad-aluno-nome">NOME COMPLETO</label>
+          <input class="field-inp" id="cad-aluno-nome" type="text" placeholder="Nome do aluno" required />
+        </div>
+
+        <div class="field-group">
+          <label class="field-lbl" for="cad-aluno-turma">TURMA</label>
+          <select class="field-inp" id="cad-aluno-turma" required>
+            <option value="" disabled selected>Selecione a turma...</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label class="field-lbl" for="cad-aluno-senha">SENHA (PIN)</label>
+          <div style="display: flex; gap: 8px;">
+            <input class="field-inp" id="cad-aluno-senha" type="text" placeholder="Gerar senha" style="flex: 1;" required />
+            <button type="button" id="btn-gerar-senha-aluno" style="padding: 0 16px; border-radius: 8px; border: 2px solid var(--border); background: #fff; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; color: #123824;">Gerar</button>
+          </div>
+        </div>
+
+        <div class="login-error hidden" id="cad-aluno-error">Erro ao cadastrar</div>
+
+        <div class="excecao-actions">
+          <button type="button" class="btn-cancel-excecao" id="btn-cancel-cadastro-aluno">Cancelar</button>
+          <button type="submit" class="btn-submit-excecao" id="btn-salvar-aluno" style="position: relative;">
+            <span id="btn-aluno-txt">Cadastrar Aluno</span>
+            <span id="btn-aluno-loader" class="loader hidden"></span>
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 

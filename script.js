@@ -27,6 +27,12 @@ async function carregarTurmasLogin() {
     const options = data.map(t => `<option value="${t.id}">${t.nome}</option>`).join("");
     selectTurma.innerHTML = `<option value="">Selecione sua turma...</option>` + options;
   }
+  
+  const selectTurmaCad = $("cad-aluno-turma");
+  if (selectTurmaCad) {
+    const options = data.map(t => `<option value="${t.id}">${t.nome}</option>`).join("");
+    selectTurmaCad.innerHTML = `<option value="" disabled selected>Selecione a turma...</option>` + options;
+  }
 }
 
 // Chame a função automaticamente quando a página carregar
@@ -327,15 +333,36 @@ $("btn-ambas").addEventListener("click", () => {
 });
 
 $("btn-confirm-order").addEventListener("click", () => {
+  const now = new Date();
+  const utcNow = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const bsbTime = new Date(utcNow + (3600000 * -3)); 
+  
+  if (bsbTime.getHours() > 7 || (bsbTime.getHours() === 7 && bsbTime.getMinutes() > 50)) {
+    const toast = $("toast");
+    if (toast) {
+      toast.textContent = "O horário limite (07:50) já foi encerrado.";
+      toast.classList.remove("hidden");
+      setTimeout(() => toast.classList.add("hidden"), 3000);
+    } else {
+      alert("O horário limite para pedidos (07:50) já foi encerrado.");
+    }
+    return;
+  }
+
   $("aluno-order-section").classList.add("hidden");
   $("aluno-confirmed").classList.remove("hidden");
 
   const tags = $("confirmed-tags");
   tags.innerHTML = "";
-  if (selectedMeals.recreio) tags.innerHTML += `<span class="cb-tag">🥐 1º Recreio</span>`;
-  if (selectedMeals.almoco)  tags.innerHTML += `<span class="cb-tag">🍽️ Almoço</span>`;
+  if (selectedMeals.recreio) tags.innerHTML += `<span class="cb-tag">Lanche</span>`;
+  if (selectedMeals.almoco)  tags.innerHTML += `<span class="cb-tag">Almoço</span>`;
   
-  showToast("Pedido confirmado com sucesso!");
+  const toast = $("toast");
+  if (toast) {
+    toast.textContent = "Pedido confirmado com sucesso!";
+    toast.classList.remove("hidden");
+    setTimeout(() => toast.classList.add("hidden"), 3000);
+  }
 });
 
 /* ── TELA COORDENAÇÃO (STITCH INTERACTION SYSTEM) ────────── */
@@ -445,7 +472,7 @@ function renderCoord() {
         list.innerHTML = `
           <div style="text-align:center; padding: 48px 20px; background: #fff; border-radius: 20px; border: 1.5px dashed #d5c8b8; color: #8c7b6d;">
             <p style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Nenhum aluno cadastrado nesta turma ainda.</p>
-            <p style="font-size: 14px;">Use o botão "Adicionar Exceção" acima ou cadastre alunos no painel de cadastro.</p>
+            <p style="font-size: 14px;">Use o botão "Adicionar Exceção" ou cadastre alunos usando o botão "Cadastrar Aluno" acima.</p>
           </div>
         `;
       } else {
@@ -985,3 +1012,112 @@ $("btn-next-scan").addEventListener("click", () => {
   if ($("cz-chip-date")) $("cz-chip-date").textContent = new Date().toLocaleDateString("pt-BR", { day:"numeric", month:"short", year:"numeric" });
   syncCozinha();
 })();
+
+/* ── LÓGICA DO MODAL CADASTRAR ALUNO ─ */
+function abrirModalCadastroAluno() {
+  const modal = $("modal-cadastro-aluno");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function fecharModalCadastroAluno() {
+  const modal = $("modal-cadastro-aluno");
+  if (modal) modal.classList.add("hidden");
+  const form = $("form-cadastro-aluno");
+  if (form) form.reset();
+  const errEl = $("cad-aluno-error");
+  if (errEl) errEl.classList.add("hidden");
+}
+
+if ($("btn-cadastrar-aluno")) {
+  $("btn-cadastrar-aluno").addEventListener("click", abrirModalCadastroAluno);
+}
+
+["btn-close-cadastro-aluno", "btn-cancel-cadastro-aluno"].forEach(id => {
+  const btn = $(id);
+  if (btn) btn.addEventListener("click", fecharModalCadastroAluno);
+});
+
+const modalCadastroAluno = $("modal-cadastro-aluno");
+if (modalCadastroAluno) {
+  modalCadastroAluno.addEventListener("click", (e) => {
+    if (e.target === modalCadastroAluno) fecharModalCadastroAluno();
+  });
+}
+
+function gerarSenha() {
+  const chars = "abcdefghjkmnpqrstuvwxyz23456789";
+  let s = "";
+  for (let i = 0; i < 8; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+
+if ($("btn-gerar-senha-aluno")) {
+  $("btn-gerar-senha-aluno").addEventListener("click", () => {
+    $("cad-aluno-senha").value = gerarSenha();
+  });
+}
+
+if ($("form-cadastro-aluno")) {
+  $("form-cadastro-aluno").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const nome    = $("cad-aluno-nome").value.trim();
+    const turmaId = $("cad-aluno-turma").value;
+    const senha   = $("cad-aluno-senha").value.trim();
+    const errEl   = $("cad-aluno-error");
+
+    errEl.classList.add("hidden");
+    $("cad-aluno-nome").classList.remove("error");
+    $("cad-aluno-turma").classList.remove("error");
+    $("cad-aluno-senha").classList.remove("error");
+
+    if (!nome || !turmaId || !senha) {
+      errEl.textContent = "Preencha todos os campos antes de salvar.";
+      errEl.classList.remove("hidden");
+      return;
+    }
+    if (senha.length < 6) {
+      errEl.textContent = "A senha deve ter ao menos 6 caracteres.";
+      errEl.classList.remove("hidden");
+      return;
+    }
+
+    const btnTxt = $("btn-aluno-txt");
+    const btnLoader = $("btn-aluno-loader");
+    const btnSubmit = $("btn-salvar-aluno");
+    
+    if (btnTxt) btnTxt.classList.add("hidden");
+    if (btnLoader) btnLoader.classList.remove("hidden");
+    if (btnSubmit) btnSubmit.disabled = true;
+
+    const matricula = `AL${Date.now().toString().slice(-8)}`;
+
+    const { data, error } = await db.rpc("cadastrar_aluno", {
+      p_nome: nome,
+      p_turma_id: turmaId,
+      p_matricula: matricula,
+      p_pin: senha,
+    });
+
+    if (btnTxt) btnTxt.classList.remove("hidden");
+    if (btnLoader) btnLoader.classList.add("hidden");
+    if (btnSubmit) btnSubmit.disabled = false;
+
+    if (error) {
+      errEl.textContent = "Erro ao salvar. Verifique se você está logado como Coordenação/Secretaria.";
+      errEl.classList.remove("hidden");
+      console.log(error);
+      return;
+    }
+
+    fecharModalCadastroAluno();
+    
+    const toast = $("toast");
+    if (toast) {
+      toast.textContent = `Aluno(a) ${nome} cadastrado(a) com sucesso!`;
+      toast.classList.remove("hidden");
+      setTimeout(() => toast.classList.add("hidden"), 3000);
+    } else {
+      alert(`Aluno(a) ${nome} cadastrado(a) com sucesso!`);
+    }
+  });
+}
