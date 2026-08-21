@@ -637,12 +637,11 @@ body:has(#screen-coordenacao.active) .nav-tab[data-screen="coordenacao"].active:
 .cz-chip.live { display: flex; align-items: center; gap: 9px; min-height: 53px; padding: 0 22px; border: 0; border-radius: 999px; background: linear-gradient(105deg, #bd2933, #ee4343); color: #fff; font-size: 18px; font-weight: 700; box-shadow: 0 9px 19px rgba(186,41,45,.22); }
 .live-dot { width: 21px; height: 21px; border: 3px solid #fff; background: transparent; box-shadow: 0 0 0 3px rgba(255,255,255,.28); }
 .cz-cards { display: grid; grid-template-columns: repeat(2, minmax(300px, 1fr)); gap: 27px; width: min(100%, 1135px); margin: 30px 0 37px; }
-.cz-card { min-height: 410px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 38px 26px; border: 13px solid #f1e2c6; border-radius: 48px; background: #fff; box-shadow: 0 15px 20px rgba(91,55,26,.14); }
+.cz-card { min-height: 410px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 38px 26px; border: 13px solid #f1e2c6; border-radius: 48px; background: #fff; box-shadow: 0 15px 20px rgba(91,55,26,.14); text-align: center; }
 .cz-card.highlight { border-color: #f1e2c6; box-shadow: 0 15px 20px rgba(91,55,26,.14); }
-.cz-icon { order: 2; margin: 32px 0 0; font-size: 64px; }
-.cz-num { order: 1; color: #dc333a; font-family: "Plus Jakarta Sans", sans-serif; font-size: clamp(82px, 10.4vw, 143px); font-weight: 800; line-height: .9; letter-spacing: -8px; text-shadow: 0 4px 0 rgba(137,28,29,.12); }
-.cz-lbl { order: 3; margin: -46px 0 0 114px; color: #2c1411; font-family: "Plus Jakarta Sans", sans-serif; font-size: 27px; font-weight: 800; letter-spacing: -1px; }
-.cz-time { order: 4; margin: 4px 0 0 116px; color: #2c1411; font-size: 20px; }
+.cz-num { color: #dc333a; font-family: "Plus Jakarta Sans", sans-serif; font-size: clamp(82px, 10.4vw, 143px); font-weight: 800; line-height: .9; letter-spacing: -4px; text-shadow: 0 4px 0 rgba(137,28,29,.12); text-align: center; margin-bottom: 20px; }
+.cz-lbl { color: #2c1411; font-family: "Plus Jakarta Sans", sans-serif; font-size: 27px; font-weight: 800; letter-spacing: -1px; text-align: center; margin: 0 0 6px 0; }
+.cz-time { color: #2c1411; font-size: 20px; text-align: center; margin: 0; }
 .cozinha-wrap::after { content: "Total de pedidos hoje: " attr(data-total); order: 5; padding: 17px 27px; border-radius: 12px; background: #fbf5eb; color: #3a211b; font-size: 19px; }
 
 /* Reconhecimento */
@@ -736,15 +735,16 @@ body:has(#screen-coordenacao.active) .nav-tab[data-screen="coordenacao"].active:
   .ah-turma { font-size: 18px; }
   .prazo-bar { min-height: 142px; margin-top: 25px; }
   .pb-time { font-size: 53px; }
-  #aluno-order-section { display: flex; flex-direction: column; gap: 17px; }
+  #aluno-order-section { display: flex; flex-direction: column; gap: 17px; width: 100%; }
   .section-label { align-self: flex-start; font-size: 17px; }
-  .meals-grid { display: grid; width: 100%; grid-template-columns: 1fr; gap: 15px; }
-  #meal-recreio, #meal-almoco { grid-column: auto; }
-  .meal-card { width: 100%; grid-template-columns: 44% 1fr; height: 205px; min-height: 205px; }
-  .mc-icon { height: 166px; min-height: 166px; }
-  .mc-name { font-size: 21px; }
+  .meals-grid { display: flex; flex-direction: column; width: 100%; gap: 15px; }
+  #meal-recreio, #meal-almoco { grid-column: auto; grid-row: auto; width: 100%; }
+  .meal-card { width: 100%; display: grid; grid-template-columns: 140px 1fr; align-items: center; height: auto; min-height: 140px; padding: 14px; box-sizing: border-box; }
+  .mc-icon { width: 100%; height: 112px; min-height: 112px; border-radius: 16px; }
+  .mc-body { padding: 4px 14px; }
+  .mc-name { font-size: 21px; margin-bottom: 4px; }
   .mc-time, .mc-dur { font-size: 14px; }
-  .btn-ambas { width: 100%; min-height: 62px; }
+  .btn-ambas { width: 100%; min-height: 54px; padding: 12px 20px; display: flex; align-items: center; justify-content: center; gap: 8px; }
   .ambas-icons { display: inline; margin: 0 8px 0 0; font-size: 21px; }
   .ambas-label { display: inline; font-size: 15px; }
   .ambas-check { position: static; display: inline-grid; margin: 0 0 0 7px; }
@@ -768,10 +768,9 @@ body:has(#screen-coordenacao.active) .nav-tab[data-screen="coordenacao"].active:
   .cz-chips { margin-bottom: 22px; }
   .cz-cards { grid-template-columns: 1fr; gap: 17px; margin-top: 20px; }
   .cz-card { min-height: 290px; border-width: 9px; border-radius: 34px; }
-  .cz-num { font-size: 94px; }
-  .cz-icon { font-size: 48px; margin-top: 21px; }
-  .cz-lbl { margin-left: 80px; font-size: 23px; }
-  .cz-time { margin-left: 83px; font-size: 17px; }
+  .cz-num { font-size: 94px; margin-bottom: 14px; }
+  .cz-lbl { margin: 0 0 4px 0; font-size: 23px; text-align: center; }
+  .cz-time { margin: 0; font-size: 17px; text-align: center; }
 
   .facial-wrap { padding: 18px 12px 32px; }
   .facial-main { min-height: 0; padding: 18px 13px 28px; border-radius: 13px; }
@@ -792,12 +791,15 @@ body:has(#screen-coordenacao.active) .nav-tab[data-screen="coordenacao"].active:
   .role-row { gap: 5px; }
   .role-btn { font-size: 11px; padding: 6px; }
   .field-inp { height: 48px; font-size: 14px; }
-  .meal-card { grid-template-columns: 40% 1fr; height: 178px; min-height: 178px; }
-  .mc-icon { height: 140px; min-height: 140px; }
+  .meal-card { grid-template-columns: 110px 1fr; height: auto; min-height: 110px; padding: 10px; }
+  .mc-icon { width: 100%; height: 90px; min-height: 90px; border-radius: 12px; }
+  .mc-body { padding: 2px 10px; }
+  .mc-name { font-size: 18px; }
+  .mc-time, .mc-dur { font-size: 12px; }
   .mbadge { font-size: 12px; padding: 6px; }
   .coord-title { font-size: 34px; }
-  .cz-lbl { margin-left: 64px; font-size: 20px; }
-  .cz-time { margin-left: 66px; font-size: 15px; }
+  .cz-lbl { margin: 0 0 4px 0; font-size: 20px; text-align: center; }
+  .cz-time { margin: 0; font-size: 15px; text-align: center; }
 }
 
 /* Tablet (761–900px): garante que o card de login não estoure */
