@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="merenda.css?v=20260821-2" />
   
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.8.6/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -124,7 +125,7 @@
         </div>
         <div class="pb-right">
           <span class="pb-dot"></span>
-          <span class="pb-remaining">23 min restantes</span>
+          <span class="pb-remaining"></span>
         </div>
       </div>
 
@@ -186,7 +187,8 @@
             <h2 class="coord-title">Painel de Coordenação</h2>
             <p class="coord-date" id="coord-date"></p>
           </div>
-          <div style="display: flex; gap: 12px;">
+          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button class="btn-excecao" id="btn-gestao-senhas" style="background: transparent; color: #801d1c; border: 2px solid #801d1c;">🔑 Gestão de Senhas</button>
             <button class="btn-excecao" id="btn-cadastrar-aluno" style="background: transparent; color: #DF8235; border: 2px solid #DF8235;">Cadastrar Aluno</button>
             <button class="btn-excecao" id="btn-add-excecao">Adicionar Exceção</button>
           </div>
@@ -215,6 +217,61 @@
         <div class="coord-students-list" id="coord-students-list">
           <!-- Linhas de alunos inseridas dinamicamente -->
         </div>
+      </div>
+
+      <!-- VISÃO 3: GESTÃO DE SENHAS (Reset) -->
+      <div id="coord-view-reset" class="hidden">
+        <nav class="coord-breadcrumb" aria-label="Navegação">
+          <span class="crumb-link" id="crumb-reset-to-classes">Coordenação</span>
+          <span class="crumb-sep">›</span>
+          <span class="crumb-current">Gestão de Senhas</span>
+        </nav>
+
+        <div class="coord-students-header">
+          <h2 class="coord-students-title">Resetar Senha de Alunos</h2>
+          <button class="btn-back-classes" id="btn-reset-back-classes">← Voltar ao Painel</button>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <input type="text" id="coord-reset-search" class="field-inp" placeholder="Buscar aluno por nome ou turma..." style="max-width: 100%;">
+        </div>
+
+        <div class="coord-students-list" id="coord-reset-list">
+          <!-- Lista de todos os alunos gerada via JS -->
+        </div>
+      </div>
+
+      <!-- VISÃO 4: DEFINIR NOVA SENHA -->
+      <div id="coord-view-new-password" class="hidden">
+        <nav class="coord-breadcrumb" aria-label="Navegação">
+          <span class="crumb-link" id="crumb-newpwd-to-classes">Coordenação</span>
+          <span class="crumb-sep">›</span>
+          <span class="crumb-link" id="crumb-newpwd-to-reset">Gestão de Senhas</span>
+          <span class="crumb-sep">›</span>
+          <span class="crumb-current">Nova Senha</span>
+        </nav>
+
+        <div class="coord-students-header" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+          <h2 class="coord-students-title">Definir Nova Senha</h2>
+          <p class="coord-date" style="font-size: 15px;">Aluno: <strong id="newpwd-student-name">...</strong></p>
+        </div>
+
+        <form id="form-new-password" style="background: #fff; padding: 24px; border-radius: 12px; border: 1px solid var(--border); max-width: 400px; margin-top: 20px;">
+          <div class="field-group">
+            <label class="field-lbl" for="new-pwd-input">NOVA SENHA (MÍN 6 CARACTERES)</label>
+            <input class="field-inp" id="new-pwd-input" type="text" placeholder="Digite a nova senha" required minlength="6" />
+          </div>
+          
+          <div class="login-error hidden" id="new-pwd-error">Erro ao redefinir senha</div>
+
+          <div style="display: flex; gap: 12px; margin-top: 24px;">
+            <button type="button" class="btn-cancel-excecao" id="btn-cancel-new-pwd" style="flex: 1;">Cancelar</button>
+            <button type="submit" class="btn-submit-excecao" id="btn-save-new-pwd" style="flex: 1; position: relative;">
+              <span id="btn-newpwd-txt">Salvar Senha</span>
+              <span id="btn-newpwd-loader" class="loader hidden"></span>
+            </button>
+          </div>
+        </form>
       </div>
 
     </div>
@@ -395,17 +452,7 @@
     </div>
   </div>
 
-  <!-- Modal Resetar Senha (Stitch Screen 3: b34bc61819da4706b4032017d544f26f) -->
-  <div class="modal-backdrop hidden" id="modal-reset-senha">
-    <div class="modal-box reset-senha-modal-box">
-      <h3 class="reset-modal-title">Resetar Senha</h3>
-      <p class="reset-modal-desc">Tem certeza que deseja resetar a senha do aluno <strong id="reset-student-name">Ana Clara</strong>?</p>
-      <div class="reset-modal-actions">
-        <button type="button" class="btn-reset-cancel" id="btn-cancel-reset">Cancelar</button>
-        <button type="button" class="btn-reset-confirm" id="btn-confirm-reset">Confirmar Reset</button>
-      </div>
-    </div>
-  </div>
+
 
   <div class="modal-backdrop hidden" id="modal-backdrop">
     <div class="modal-box" id="modal-auth" style="position: relative;">

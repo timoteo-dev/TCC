@@ -44,7 +44,8 @@ window.addEventListener('DOMContentLoaded', () => {
 const ALL_TURMAS = [
   "1 I01 LCH", "1 I02 LCH", "1 I01 IPI", "1 I01 MCN",
   "2 I01 LCH", "2 I02 LCH", "2 I01 IPI",
-  "3 I01 ESP", "3 I02 ESP", "3 I01 IPI", "3 I01 HUM"
+  "3 I01 ESP", "3 I02 ESP", "3 I01 IPI", "3 I01 HUM",
+  "Exceções"
 ];
 
 let students = []; // carregado do Supabase
@@ -232,6 +233,14 @@ $("btn-login").addEventListener("click", async () => {
     if (nameParts.length > 1) initials += nameParts[nameParts.length - 1][0];
     $("aluno-avatar-display").textContent = initials.toUpperCase();
 
+    const selectTurma = $("input-turma");
+    if (selectTurma && selectTurma.selectedIndex >= 0) {
+      const turmaName = selectTurma.options[selectTurma.selectedIndex].text;
+      if ($("aluno-turma-display")) {
+        $("aluno-turma-display").textContent = `Turma — ${turmaName}`;
+      }
+    }
+
     showToast(`Bem-vindo(a), ${aluno.nome}!`);
     goTo("aluno");
     return;
@@ -412,11 +421,25 @@ function voltarParaTurmas() {
   renderCoord();
 }
 
+let isResetViewOpen = false;
+
 function renderCoord() {
+  if (activeRole !== "coordenacao") return;
   if ($("coord-date")) $("coord-date").textContent = formatDate();
 
   const viewClasses = $("coord-view-classes");
   const viewStudents = $("coord-view-students");
+  const viewReset = $("coord-view-reset");
+
+  if (isResetViewOpen) {
+    if (viewClasses) viewClasses.classList.add("hidden");
+    if (viewStudents) viewStudents.classList.add("hidden");
+    if (viewReset) viewReset.classList.remove("hidden");
+    renderResetView();
+    return; // Early return to avoid rendering classes/students
+  } else {
+    if (viewReset) viewReset.classList.add("hidden");
+  }
 
   if (!currentSelectedTurma) {
     // ── MOSTRA VISÃO 1: CARDS DE TURMAS (Stitch Screen 1) ──
@@ -519,9 +542,6 @@ function renderCoord() {
               <button class="stitch-meal-btn ${a.almoco ? "active" : "inactive"}" data-action="almoco" data-id="${a.id}">
                 🍽️ Almoço
               </button>
-              <button class="btn-reset-pin" data-action="senha" data-id="${a.id}">
-                Senha
-              </button>
             </div>
           `;
           list.appendChild(row);
@@ -542,14 +562,7 @@ function renderCoord() {
           });
         });
 
-        // Event listener para o botão Senha (Abre Modal de Reset)
-        list.querySelectorAll("[data-action='senha']").forEach(btn => {
-          btn.addEventListener("click", () => {
-            const id = parseInt(btn.dataset.id);
-            const s = students.find(s => s.id === id);
-            if (s) openResetPinModal(s);
-          });
-        });
+        // Event listener removido da VISÃO 2. Senhas agora resetadas na VISÃO 3.
 
         // Event listener para o botão Confirmar
         list.querySelectorAll("[data-action='confirmar']").forEach(btn => {
@@ -571,44 +584,197 @@ if ($("crumb-to-classes")) $("crumb-to-classes").addEventListener("click", volta
 if ($("crumb-to-classes-2")) $("crumb-to-classes-2").addEventListener("click", voltarParaTurmas);
 if ($("btn-back-classes")) $("btn-back-classes").addEventListener("click", voltarParaTurmas);
 
-/* ── MODAL RESETAR SENHA (Stitch Screen 3) ────────────────── */
-function openResetPinModal(student) {
+/* ── LÓGICA DE DEFINIR NOVA SENHA (VISÃO 4) ────────────────── */
+
+function openNewPasswordView(student) {
   studentToReset = student;
-  if ($("reset-student-name")) $("reset-student-name").textContent = student.name;
-  const modal = $("modal-reset-senha");
-  if (modal) modal.classList.remove("hidden");
+  
+  if ($("newpwd-student-name")) $("newpwd-student-name").textContent = student.name;
+  if ($("new-pwd-input")) $("new-pwd-input").value = "";
+  if ($("new-pwd-error")) $("new-pwd-error").classList.add("hidden");
+
+  // Ocultar as outras visões
+  const viewClasses = $("coord-view-classes");
+  const viewStudents = $("coord-view-students");
+  const viewReset = $("coord-view-reset");
+  const viewNewPwd = $("coord-view-new-password");
+
+  if (viewClasses) viewClasses.classList.add("hidden");
+  if (viewStudents) viewStudents.classList.add("hidden");
+  if (viewReset) viewReset.classList.add("hidden");
+  if (viewNewPwd) viewNewPwd.classList.remove("hidden");
 }
 
-function closeResetPinModal() {
+function closeNewPasswordView() {
   studentToReset = null;
-  const modal = $("modal-reset-senha");
-  if (modal) modal.classList.add("hidden");
+  const viewNewPwd = $("coord-view-new-password");
+  if (viewNewPwd) viewNewPwd.classList.add("hidden");
+  
+  // Volta para a Visão 3 (Gestão de Senhas)
+  const viewReset = $("coord-view-reset");
+  if (viewReset) viewReset.classList.remove("hidden");
 }
 
-if ($("btn-cancel-reset")) $("btn-cancel-reset").addEventListener("click", closeResetPinModal);
-const modalResetSenha = $("modal-reset-senha");
-if (modalResetSenha) {
-  modalResetSenha.addEventListener("click", (e) => {
-    if (e.target === modalResetSenha) closeResetPinModal();
+if ($("btn-cancel-new-pwd")) {
+  $("btn-cancel-new-pwd").addEventListener("click", closeNewPasswordView);
+}
+if ($("crumb-newpwd-to-reset")) {
+  $("crumb-newpwd-to-reset").addEventListener("click", closeNewPasswordView);
+}
+if ($("crumb-newpwd-to-classes")) {
+  $("crumb-newpwd-to-classes").addEventListener("click", () => {
+    studentToReset = null;
+    isResetViewOpen = false;
+    const viewNewPwd = $("coord-view-new-password");
+    if (viewNewPwd) viewNewPwd.classList.add("hidden");
+    renderCoord();
   });
 }
 
-if ($("btn-confirm-reset")) {
-  $("btn-confirm-reset").addEventListener("click", async () => {
-    if (studentToReset) {
-      const studentName = studentToReset.name;
-      // Reset no banco Supabase se aplicável
-      try {
-        await db.from("alunos")
-          .update({ pin_hash: "$2a$06$dw9gR1sO8C0lvMlOLzoKAekYpL.RJozWrAoUCbhcMe2DOxh5uamgq", tentativas_pin: 0, bloqueado_ate: null })
-          .ilike("nome", studentName);
-      } catch (err) {
-        console.log("Nota: Reset local efetuado.", err);
+const formNewPwd = $("form-new-password");
+if (formNewPwd) {
+  formNewPwd.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!studentToReset) return;
+
+    const newPwd = $("new-pwd-input").value.trim();
+    if (newPwd.length < 6) {
+      if ($("new-pwd-error")) {
+        $("new-pwd-error").textContent = "A senha deve ter pelo menos 6 caracteres.";
+        $("new-pwd-error").classList.remove("hidden");
+      }
+      return;
+    }
+    if (studentToReset.isException) {
+      if ($("new-pwd-error")) {
+        $("new-pwd-error").textContent = "Alunos adicionados como exceção não possuem senha no sistema.";
+        $("new-pwd-error").classList.remove("hidden");
+      }
+      return;
+    }
+
+    const btnTxt = $("btn-newpwd-txt");
+    const btnLoader = $("btn-newpwd-loader");
+    const errorDiv = $("new-pwd-error");
+    
+    if (btnTxt) btnTxt.classList.add("hidden");
+    if (btnLoader) btnLoader.classList.remove("hidden");
+    if (errorDiv) errorDiv.classList.add("hidden");
+
+    try {
+      // 1. Criptografa a nova senha com bcrypt (salto de 6, como o padrão do seu app)
+      // Obs: Depende do CDN bcryptjs importado no HTML
+      const bcryptLib = window.dcodeIO ? window.dcodeIO.bcrypt : window.bcrypt;
+      if (!bcryptLib) {
+        throw new Error("Biblioteca bcrypt não carregada corretamente no navegador.");
+      }
+      const salt = bcryptLib.genSaltSync(6);
+      const hash = bcryptLib.hashSync(newPwd, salt);
+
+      // 2. Chama a Função Segura (RPC) no Supabase para ignorar o bloqueio de RLS
+      const { data, error } = await db.rpc('resetar_senha_aluno', {
+        p_aluno_id: parseInt(studentToReset.id) || studentToReset.id,
+        p_novo_hash: hash
+      });
+
+      if (error) {
+        // Se a função não existir, tenta o update direto (fallback caso o usuário tenha adicionado política RLS em vez de RPC)
+        console.warn("RPC falhou ou não existe, tentando update direto...", error);
+        const fallback = await db.from("alunos")
+          .update({ 
+            pin_hash: hash, 
+            tentativas_pin: 0, 
+            bloqueado_ate: null 
+          })
+          .eq("id", studentToReset.id);
+          
+        if (fallback.error) {
+           throw new Error(fallback.error.message || "Erro desconhecido no Supabase ao atualizar a senha.");
+        }
       }
 
-      showToast(`A senha do aluno ${studentName} foi resetada para a senha padrão! 🔑`);
-      closeResetPinModal();
+      showToast(`A senha de ${studentToReset.name} foi redefinida com sucesso! 🔑`);
+      closeNewPasswordView();
+    } catch (err) {
+      console.error("Erro ao resetar senha:", err);
+      if (errorDiv) {
+        errorDiv.textContent = "Erro ao resetar senha: " + err.message;
+        errorDiv.classList.remove("hidden");
+      }
+    } finally {
+      if (btnTxt) btnTxt.classList.remove("hidden");
+      if (btnLoader) btnLoader.classList.add("hidden");
     }
+  });
+}
+
+/* ── LÓGICA DO GESTÃO DE SENHAS (VISÃO 3) ── */
+function renderResetView(searchTerm = "") {
+  const list = $("coord-reset-list");
+  if (!list) return;
+  list.innerHTML = "";
+
+  const term = searchTerm.toLowerCase();
+  const filteredStudents = students.filter(s => 
+    s.name.toLowerCase().includes(term) || 
+    (s.turma && s.turma.toLowerCase().includes(term))
+  );
+
+  if (filteredStudents.length === 0) {
+    list.innerHTML = `<p style="text-align:center; padding:32px; color:#888;">Nenhum aluno encontrado.</p>`;
+    return;
+  }
+
+  filteredStudents.forEach(a => {
+    const row = document.createElement("div");
+    row.className = "stitch-student-row";
+    row.innerHTML = `
+      <div class="stitch-student-left">
+        <div class="stitch-avatar">${a.initials}</div>
+        <span class="stitch-name">${a.name} <span style="font-size: 13px; color: #888; font-weight: normal;">(${a.turma})</span></span>
+      </div>
+      <div class="stitch-actions">
+        <button class="btn-reset-pin" data-action="senha" data-id="${a.id}">
+          🔑 Resetar Senha
+        </button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+
+  list.querySelectorAll("[data-action='senha']").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.id;
+      const s = students.find(x => String(x.id) === String(id));
+      if (s) openNewPasswordView(s);
+    });
+  });
+}
+
+if ($("btn-gestao-senhas")) {
+  $("btn-gestao-senhas").addEventListener("click", () => {
+    isResetViewOpen = true;
+    currentSelectedTurma = null; // Reseta seleção de turma se houver
+    renderCoord();
+  });
+}
+
+if ($("btn-reset-back-classes")) {
+  $("btn-reset-back-classes").addEventListener("click", () => {
+    isResetViewOpen = false;
+    renderCoord();
+  });
+}
+if ($("crumb-reset-to-classes")) {
+  $("crumb-reset-to-classes").addEventListener("click", () => {
+    isResetViewOpen = false;
+    renderCoord();
+  });
+}
+
+if ($("coord-reset-search")) {
+  $("coord-reset-search").addEventListener("input", (e) => {
+    renderResetView(e.target.value);
   });
 }
 
@@ -738,7 +904,7 @@ if (formExterno) {
     const newVisitor = {
       id: Date.now(),
       name: `${nome} [🏫 ${escola}] - ${refeicaoDesc}`,
-      turma: "1 I01 LCH", // atrela à turma atual ou externa
+      turma: "Exceções", // atrela à turma de Exceções
       recreio: true,
       almoco: true,
       initials: initials
