@@ -8,6 +8,7 @@
 
 const SUPABASE_URL = "https://sifhqlbobxaofeypjnhd.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpZmhxbGJvYnhhb2ZleXBqbmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxMDYzNTIsImV4cCI6MjA5ODY4MjM1Mn0.tECc42Xbmya3s7rafycICTqMQAMIMTjhH3Te7bZRofI";
+const FACE_BACKEND_URL = "http://127.0.0.1:8000";
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -532,7 +533,7 @@ function renderCoord() {
           row.className = "stitch-student-row";
           row.innerHTML = `
             <div class="stitch-student-left">
-              <div class="stitch-avatar">${a.initials}</div>
+              <div class="stitch-avatar" id="coord-avatar-${a.id}">${a.initials}</div>
               <span class="stitch-name">${a.name}</span>
             </div>
             <div class="stitch-actions">
@@ -545,6 +546,24 @@ function renderCoord() {
             </div>
           `;
           list.appendChild(row);
+        });
+
+        alunosDaTurma.forEach(async a => {
+          try {
+            const res = await fetch(`${FACE_BACKEND_URL}/foto-assinada/${a.id}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data.url) {
+                const avatarEl = document.getElementById(`coord-avatar-${a.id}`);
+                if (avatarEl) {
+                  avatarEl.innerHTML = `<img src="${data.url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Foto do aluno" />`;
+                  avatarEl.style.background = "transparent";
+                }
+              }
+            }
+          } catch(e) {
+            // Se falhar (ex: backend offline), mantém as iniciais silenciosamente
+          }
         });
 
         // Event listeners para os botões de refeição da linha
@@ -946,15 +965,11 @@ function syncCozinha() {
    RECONHECIMENTO FACIAL — BlazeFace + TensorFlow.js
    ══════════════════════════════════════════════════════════ */
 
-let tfModel    = null;
 let camStream  = null;
-let rafId      = null;
+let detectionInterval = null;
 let scanDone   = false;
-let firstFaceAt = null;
 
 const VIDEO  = $("cam-video");
-const CANVAS = $("cam-canvas");
-const CTX    = CANVAS.getContext("2d");
 
 $("btn-cam-on").addEventListener("click", () => initFacial());
 $("btn-cam-off").addEventListener("click", () => stopCamera());
@@ -975,7 +990,7 @@ function showOverlay(show, msg = "") {
 
 function stopCamera() {
   facialActive = false;
-  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  if (detectionInterval) { clearInterval(detectionInterval); detectionInterval = null; }
   
   // Desliga todas as faixas (tracks) da câmara de forma segura
   if (camStream) { 
@@ -984,7 +999,6 @@ function stopCamera() {
   }
   
   VIDEO.srcObject = null; // Limpa o vídeo do elemento HTML
-  CTX.clearRect(0, 0, CANVAS.width, CANVAS.height);
   
   showOverlay(true, "Câmara pausada. Pressione 'Ligar Câmara' para iniciar.");
   setStatus("gray", "Câmara desativada");
@@ -997,7 +1011,6 @@ async function initFacial() {
   if (facialActive) return;
   facialActive = true;
   scanDone = false;
-  firstFaceAt = null;
 
   $("id-result").classList.add("hidden");
   showOverlay(true, "A aguardar permissão e a ligar a câmara...");
@@ -1016,26 +1029,9 @@ async function initFacial() {
     await new Promise(res => { VIDEO.onloadedmetadata = res; });
     await VIDEO.play();
 
-    setStatus("gray", "A carregar Inteligência Artificial...");
-    
-    // 2. Tenta carregar o modelo de reconhecimento (BlazeFace)
-    if (!tfModel) {
-      if (typeof blazeface === "undefined") {
-        throw new Error("A biblioteca BlazeFace não foi encontrada. Verifique sua conexão e recarregue a página.");
-      }
-      // Aproveita o modelo pré-carregado no início da página, se disponível
-      tfModel = window._blazefaceModelPromise
-        ? await window._blazefaceModelPromise
-        : await blazeface.load();
-
-      if (!tfModel) {
-        throw new Error("Falha ao carregar o modelo de IA. Recarregue a página e tente novamente.");
-      }
-    }
-
     // Se chegou até aqui, tudo correu bem! Remove a tela escura e liberta o botão de desligar.
     showOverlay(false);
-    setStatus("gray", "Posicione o rosto do aluno na câmara");
+    setStatus("gray", "Procurando rosto...");
     $("btn-cam-off").disabled = false;
 
     startDetectionLoop();
@@ -1043,8 +1039,7 @@ async function initFacial() {
   } catch (err) {
     console.error(err);
     
-    // CORREÇÃO: Se deu erro na IA, força o desligamento da câmara fisicamente
-    // para que não fique a rodar invisível atrás da tela preta de erro.
+    // CORREÇÃO: Se deu erro, força o desligamento da câmara fisicamente
     if (camStream) {
       camStream.getTracks().forEach(t => t.stop());
       camStream = null;
@@ -1052,11 +1047,9 @@ async function initFacial() {
     VIDEO.srcObject = null;
 
     // Define a mensagem exata do erro
-    let msg = "Erro ao iniciar a câmara ou a IA.";
+    let msg = "Erro ao iniciar a câmara.";
     if (err.name === "NotAllowedError") {
       msg = "Permissão negada. Autorize o uso da câmara no topo do navegador.";
-    } else if (location.protocol === 'file:') {
-      msg = "Os navegadores bloqueiam a IA ao abrir o ficheiro diretamente. Utilize a extensão 'Live Server' no VS Code.";
     } else {
       msg = err.message;
     }
@@ -1073,104 +1066,73 @@ async function initFacial() {
 }
 
 function startDetectionLoop() {
-  scanDone    = false;
-  firstFaceAt = null;
-
-  async function detect() {
+  scanDone = false;
+  
+  if (detectionInterval) clearInterval(detectionInterval);
+  
+  detectionInterval = setInterval(async () => {
     if (!facialActive || scanDone) return;
+    if (!VIDEO || VIDEO.readyState < 2) return;
+    
+    await identificarRostoNoBackend();
+  }, 1500); // 1.5s polling
+}
 
-    const video = VIDEO;
-    if (!video || !tfModel || video.readyState < 2) {
-      rafId = requestAnimationFrame(detect);
-      return;
-    }
-
-    if (CANVAS.width  !== video.videoWidth)  CANVAS.width  = video.videoWidth;
-    if (CANVAS.height !== video.videoHeight) CANVAS.height = video.videoHeight;
-    CTX.clearRect(0, 0, CANVAS.width, CANVAS.height);
-
-    try {
-      const predictions = await tfModel.estimateFaces(video, false);
-
-      if (predictions.length > 0) {
-        const face = predictions[0];
-        const [x1, y1] = face.topLeft;
-        const [x2, y2] = face.bottomRight;
-        const w = x2 - x1;
-        const h = y2 - y1;
-        const c = Math.min(w, h) * 0.22;
-
-        drawFaceBox(x1, y1, x2, y2, w, h, c);
-
-        if (!firstFaceAt) {
-          firstFaceAt = Date.now();
-          setStatus("yellow", "A identificar aluno...");
-        }
-
-        const elapsed = Date.now() - firstFaceAt;
-        const progress = Math.min(elapsed / 2600, 1);
-        drawProgressBar(x1, y2 + 8, w, progress);
-
-        if (elapsed > 2600 && !scanDone) {
-          scanDone = true;
-          drawSuccess(x1, y1, w, h);
-          // Simula a identificação do primeiro aluno
-          setTimeout(() => showIdentified(students[0]), 200);
-          return;
-        }
-
+async function identificarRostoNoBackend() {
+  if (!facialActive || scanDone) return;
+  
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = VIDEO.videoWidth;
+    canvas.height = VIDEO.videoHeight;
+    // Espelha para capturar corretamente se estiver usando front-cam
+    const ctx = canvas.getContext("2d");
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(VIDEO, 0, 0);
+    
+    const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", 0.9));
+    const formData = new FormData();
+    formData.append("file", blob, "frame.jpg");
+    
+    const res = await fetch(`${FACE_BACKEND_URL}/identify`, {
+      method: "POST",
+      body: formData
+    });
+    
+    const data = await res.json();
+    if (data.match && data.aluno_id) {
+      scanDone = true; // Para de tentar
+      const s = students.find(al => al.id === data.aluno_id);
+      if (s) {
+        showIdentified(s);
+        setStatus("green", "Aluno identificado com sucesso");
       } else {
-        firstFaceAt = null;
-        CTX.clearRect(0, 0, CANVAS.width, CANVAS.height);
-        setStatus("gray", "Posicione o rosto do aluno na câmara");
+        const { data: dbAluno } = await db.from("alunos").select("id, nome, turma_id, turmas(nome)").eq("id", data.aluno_id).single();
+        if (dbAluno) {
+          showIdentified({
+            id: dbAluno.id,
+            name: dbAluno.nome,
+            turma: dbAluno.turmas ? dbAluno.turmas.nome : "",
+            initials: dbAluno.nome[0],
+            recreio: false,
+            almoco: false
+          });
+          setStatus("green", "Aluno identificado com sucesso");
+        } else {
+          scanDone = false; // Continua tentando
+          setStatus("red", "Aluno não encontrado na base");
+        }
       }
-    } catch (_) { /* frame skip */ }
-
-    rafId = requestAnimationFrame(detect);
+    } else {
+      setStatus("gray", "Procurando rosto...");
+    }
+  } catch(err) {
+    console.error("Erro na identificação:", err);
   }
-
-  rafId = requestAnimationFrame(detect);
 }
 
-/* ── FUNÇÕES DE DESENHO ──────────────────────────────────── */
-function drawFaceBox(x1, y1, x2, y2, w, h, c) {
-  CTX.strokeStyle = "#4ADE80";
-  CTX.lineWidth   = 3;
-  CTX.lineCap     = "round";
-  CTX.beginPath();
-  CTX.moveTo(x1 + c, y1); CTX.lineTo(x1, y1); CTX.lineTo(x1, y1 + c);
-  CTX.moveTo(x2 - c, y1); CTX.lineTo(x2, y1); CTX.lineTo(x2, y1 + c);
-  CTX.moveTo(x2, y2 - c); CTX.lineTo(x2, y2); CTX.lineTo(x2 - c, y2);
-  CTX.moveTo(x1 + c, y2); CTX.lineTo(x1, y2); CTX.lineTo(x1, y2 - c);
-  CTX.stroke();
 
-  const t   = (Date.now() % 1800) / 1800;
-  const sy  = y1 + h * t;
-  const grad = CTX.createLinearGradient(x1, sy - 12, x1, sy + 12);
-  grad.addColorStop(0,   "rgba(74,222,128,0)");
-  grad.addColorStop(0.5, "rgba(74,222,128,0.5)");
-  grad.addColorStop(1,   "rgba(74,222,128,0)");
-  CTX.fillStyle = grad;
-  CTX.fillRect(x1, sy - 12, w, 24);
-}
-
-function drawProgressBar(x, y, w, progress) {
-  CTX.fillStyle = "rgba(255,255,255,0.15)";
-  CTX.beginPath();
-  CTX.roundRect(x, y, w, 5, 3);
-  CTX.fill();
-
-  CTX.fillStyle = "#4ADE80";
-  CTX.beginPath();
-  CTX.roundRect(x, y, w * progress, 5, 3);
-  CTX.fill();
-}
-
-function drawSuccess(x1, y1, w, h) {
-  CTX.fillStyle = "rgba(74,222,128,0.15)";
-  CTX.fillRect(x1, y1, w, h);
-  setStatus("green", "Aluno identificado com sucesso");
-}
 
 /* ── RESULTADO DA IDENTIFICAÇÃO ──────────────────────────── */
 function showIdentified(student) {
@@ -1193,11 +1155,8 @@ function showIdentified(student) {
 
 $("btn-next-scan").addEventListener("click", () => {
   $("id-result").classList.add("hidden");
-  CTX.clearRect(0, 0, CANVAS.width, CANVAS.height);
-  scanDone    = false;
-  firstFaceAt = null;
-  setStatus("gray", "Posicione o rosto do aluno na câmara");
-  startDetectionLoop();
+  scanDone = false;
+  setStatus("gray", "Procurando rosto...");
 });
 
 /* ── INICIALIZAÇÃO ───────────────────────────────────────── */
@@ -1213,6 +1172,9 @@ function abrirModalCadastroAluno() {
   if (modal) modal.classList.remove("hidden");
 }
 
+let cadCamStream = null;
+let cadPhotoBlob = null;
+
 function fecharModalCadastroAluno() {
   const modal = $("modal-cadastro-aluno");
   if (modal) modal.classList.add("hidden");
@@ -1220,6 +1182,25 @@ function fecharModalCadastroAluno() {
   if (form) form.reset();
   const errEl = $("cad-aluno-error");
   if (errEl) errEl.classList.add("hidden");
+  
+  if (cadCamStream) {
+    cadCamStream.getTracks().forEach(t => t.stop());
+    cadCamStream = null;
+  }
+  const vid = $("cad-aluno-video");
+  const prev = $("cad-aluno-preview");
+  const btnLigar = $("btn-cad-ligar-cam");
+  const btnTirar = $("btn-cad-tirar-foto");
+  const btnLimpar = $("btn-cad-limpar-foto");
+  const status = $("cad-aluno-cam-status");
+  
+  if (vid) vid.style.display = "none";
+  if (prev) prev.style.display = "none";
+  if (btnTirar) btnTirar.style.display = "none";
+  if (btnLimpar) btnLimpar.style.display = "none";
+  if (btnLigar) btnLigar.style.display = "block";
+  if (status) status.textContent = "O rosto será usado para reconhecimento na entrega da merenda.";
+  cadPhotoBlob = null;
 }
 
 if ($("btn-cadastrar-aluno")) {
@@ -1248,6 +1229,62 @@ function gerarSenha() {
 if ($("btn-gerar-senha-aluno")) {
   $("btn-gerar-senha-aluno").addEventListener("click", () => {
     $("cad-aluno-senha").value = gerarSenha();
+  });
+}
+
+if ($("btn-cad-ligar-cam")) {
+  $("btn-cad-ligar-cam").addEventListener("click", async () => {
+    try {
+      cadCamStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: "user" } });
+      const vid = $("cad-aluno-video");
+      vid.srcObject = cadCamStream;
+      vid.style.display = "block";
+      $("btn-cad-ligar-cam").style.display = "none";
+      $("btn-cad-tirar-foto").style.display = "block";
+      $("cad-aluno-cam-status").textContent = "Posicione o rosto e clique em Tirar Foto";
+    } catch(err) {
+      console.error(err);
+      $("cad-aluno-cam-status").textContent = "Erro ao acessar câmera.";
+    }
+  });
+}
+
+if ($("btn-cad-tirar-foto")) {
+  $("btn-cad-tirar-foto").addEventListener("click", () => {
+    const vid = $("cad-aluno-video");
+    const cvs = $("cad-aluno-canvas");
+    cvs.width = vid.videoWidth;
+    cvs.height = vid.videoHeight;
+    const ctx = cvs.getContext("2d");
+    ctx.translate(cvs.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(vid, 0, 0);
+    
+    cvs.toBlob(blob => {
+      cadPhotoBlob = blob;
+      const url = URL.createObjectURL(blob);
+      $("cad-aluno-preview").src = url;
+      $("cad-aluno-preview").style.display = "block";
+      vid.style.display = "none";
+      $("btn-cad-tirar-foto").style.display = "none";
+      $("btn-cad-limpar-foto").style.display = "block";
+      $("cad-aluno-cam-status").textContent = "Foto capturada!";
+      
+      if (cadCamStream) {
+        cadCamStream.getTracks().forEach(t => t.stop());
+        cadCamStream = null;
+      }
+    }, "image/jpeg", 0.9);
+  });
+}
+
+if ($("btn-cad-limpar-foto")) {
+  $("btn-cad-limpar-foto").addEventListener("click", () => {
+    $("cad-aluno-preview").style.display = "none";
+    $("btn-cad-limpar-foto").style.display = "none";
+    $("btn-cad-ligar-cam").style.display = "block";
+    $("cad-aluno-cam-status").textContent = "O rosto será usado para reconhecimento na entrega da merenda.";
+    cadPhotoBlob = null;
   });
 }
 
@@ -1302,6 +1339,24 @@ if ($("form-cadastro-aluno")) {
       errEl.classList.remove("hidden");
       console.log(error);
       return;
+    }
+
+    if (cadPhotoBlob) {
+      try {
+        const { data: novoAluno } = await db.from("alunos").select("id").eq("matricula", matricula).single();
+        if (novoAluno) {
+          const formData = new FormData();
+          formData.append("aluno_id", novoAluno.id);
+          formData.append("file", cadPhotoBlob, "foto.jpg");
+          
+          fetch(`${FACE_BACKEND_URL}/enroll`, {
+            method: "POST",
+            body: formData
+          }).catch(e => console.error("Enroll network error:", e));
+        }
+      } catch(err) {
+        console.error("Erro ao fazer enroll da face:", err);
+      }
     }
 
     fecharModalCadastroAluno();

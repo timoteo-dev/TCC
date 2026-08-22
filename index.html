@@ -10,19 +10,7 @@
 <link rel="stylesheet" href="merenda.css?v=20260821-2" />
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.8.6/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    // Pré-carrega o modelo BlazeFace assim que a página abre,
-    // para estar pronto quando o utilizador clicar em "Ligar Câmera".
-    window._blazefaceModelPromise = null;
-    window.addEventListener('load', () => {
-      if (typeof blazeface !== 'undefined') {
-        window._blazefaceModelPromise = blazeface.load().catch(() => null);
-      }
-    });
-  </script>
 </head>
 <body>
 
@@ -323,7 +311,6 @@
 
         <div class="cam-wrap" id="cam-wrap">
           <video id="cam-video" autoplay muted playsinline></video>
-          <canvas id="cam-canvas"></canvas>
           <div class="cam-overlay" id="cam-overlay">
             <div class="cam-idle-icon">📷</div>
             <p class="cam-msg" id="cam-msg">Pressione "Ligar Câmera" para iniciar</p>
@@ -494,6 +481,21 @@
           <div style="display: flex; gap: 8px;">
             <input class="field-inp" id="cad-aluno-senha" type="text" placeholder="Gerar senha" style="flex: 1;" required />
             <button type="button" id="btn-gerar-senha-aluno" style="padding: 0 16px; border-radius: 8px; border: 2px solid var(--border); background: #fff; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; color: #123824;">Gerar</button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-lbl">FOTO DO ALUNO (OPCIONAL)</label>
+          <div class="cad-foto-area" style="display: flex; flex-direction: column; align-items: center; gap: 8px; border: 2px dashed var(--border); padding: 16px; border-radius: 8px; background: #faf8f5;">
+            <video id="cad-aluno-video" autoplay muted playsinline style="width: 100%; max-width: 240px; border-radius: 8px; display: none; transform: scaleX(-1);"></video>
+            <canvas id="cad-aluno-canvas" style="display: none;"></canvas>
+            <img id="cad-aluno-preview" style="width: 100%; max-width: 240px; border-radius: 8px; display: none; transform: scaleX(-1);" />
+            <div style="display: flex; gap: 8px;">
+              <button type="button" id="btn-cad-ligar-cam" style="padding: 8px 16px; border-radius: 8px; border: 2px solid var(--border); background: #fff; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; color: #123824; font-size: 13px;">📷 Ligar Câmera</button>
+              <button type="button" id="btn-cad-tirar-foto" style="padding: 8px 16px; border-radius: 8px; border: 2px solid transparent; background: #DF8235; color: #fff; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; display: none; font-size: 13px;">Tirar Foto</button>
+              <button type="button" id="btn-cad-limpar-foto" style="padding: 8px 16px; border-radius: 8px; border: 2px solid var(--border); background: #fff; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; display: none; color: #801d1c; font-size: 13px;">Limpar</button>
+            </div>
+            <p id="cad-aluno-cam-status" style="font-size: 12px; color: #888; margin: 0; text-align: center;">O rosto será usado para reconhecimento na entrega da merenda.</p>
           </div>
         </div>
 

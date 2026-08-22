@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+python-multipart
+insightface
+onnxruntime
+opencv-python-headless
+psycopg2-binary
+pgvector
+numpy
+supabase
+python-dotenv
