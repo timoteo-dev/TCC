@@ -51,6 +51,7 @@ const ALL_TURMAS = [
 
 let students = []; // carregado do Supabase
 let currentSelectedTurma = null; // Turma selecionada na coordenação
+let currentResetSelectedTurma = null; // Turma selecionada no reset de senhas
 let studentToReset = null; // Aluno em processo de reset de senha
 let currentAlunoId = null; // Guarda o ID do aluno logado
 
@@ -436,7 +437,8 @@ function renderCoord() {
     if (viewClasses) viewClasses.classList.add("hidden");
     if (viewStudents) viewStudents.classList.add("hidden");
     if (viewReset) viewReset.classList.remove("hidden");
-    renderResetView();
+    const searchTerm = $("coord-reset-search") ? $("coord-reset-search").value : "";
+    renderResetView(searchTerm);
     return; // Early return to avoid rendering classes/students
   } else {
     if (viewReset) viewReset.classList.add("hidden");
@@ -612,6 +614,18 @@ function openNewPasswordView(student) {
   if ($("new-pwd-input")) $("new-pwd-input").value = "";
   if ($("new-pwd-error")) $("new-pwd-error").classList.add("hidden");
 
+  // Configurar breadcrumb de retorno à turma se aplicável
+  const crumbTurma = $("crumb-newpwd-to-turma");
+  const sepTurma = $("crumb-newpwd-sep-turma");
+  if (currentResetSelectedTurma && crumbTurma && sepTurma) {
+    crumbTurma.textContent = `Turma ${currentResetSelectedTurma}`;
+    crumbTurma.classList.remove("hidden");
+    sepTurma.classList.remove("hidden");
+  } else if (crumbTurma && sepTurma) {
+    crumbTurma.classList.add("hidden");
+    sepTurma.classList.add("hidden");
+  }
+
   // Ocultar as outras visões
   const viewClasses = $("coord-view-classes");
   const viewStudents = $("coord-view-students");
@@ -632,6 +646,9 @@ function closeNewPasswordView() {
   // Volta para a Visão 3 (Gestão de Senhas)
   const viewReset = $("coord-view-reset");
   if (viewReset) viewReset.classList.remove("hidden");
+
+  const searchTerm = $("coord-reset-search") ? $("coord-reset-search").value : "";
+  renderResetView(searchTerm);
 }
 
 if ($("btn-cancel-new-pwd")) {
@@ -640,10 +657,14 @@ if ($("btn-cancel-new-pwd")) {
 if ($("crumb-newpwd-to-reset")) {
   $("crumb-newpwd-to-reset").addEventListener("click", closeNewPasswordView);
 }
+if ($("crumb-newpwd-to-turma")) {
+  $("crumb-newpwd-to-turma").addEventListener("click", closeNewPasswordView);
+}
 if ($("crumb-newpwd-to-classes")) {
   $("crumb-newpwd-to-classes").addEventListener("click", () => {
     studentToReset = null;
     isResetViewOpen = false;
+    currentResetSelectedTurma = null;
     const viewNewPwd = $("coord-view-new-password");
     if (viewNewPwd) viewNewPwd.classList.add("hidden");
     renderCoord();
@@ -682,7 +703,6 @@ if (formNewPwd) {
 
     try {
       // 1. Criptografa a nova senha com bcrypt (salto de 6, como o padrão do seu app)
-      // Obs: Depende do CDN bcryptjs importado no HTML
       const bcryptLib = window.dcodeIO ? window.dcodeIO.bcrypt : window.bcrypt;
       if (!bcryptLib) {
         throw new Error("Biblioteca bcrypt não carregada corretamente no navegador.");
@@ -697,7 +717,6 @@ if (formNewPwd) {
       });
 
       if (error) {
-        // Se a função não existir, tenta o update direto (fallback caso o usuário tenha adicionado política RLS em vez de RPC)
         console.warn("RPC falhou ou não existe, tentando update direto...", error);
         const fallback = await db.from("alunos")
           .update({ 
@@ -729,65 +748,289 @@ if (formNewPwd) {
 
 /* ── LÓGICA DO GESTÃO DE SENHAS (VISÃO 3) ── */
 function renderResetView(searchTerm = "") {
+  const grid = $("coord-reset-classes-grid");
   const list = $("coord-reset-list");
-  if (!list) return;
-  list.innerHTML = "";
+  const title = $("coord-reset-title");
+  const btnBack = $("btn-reset-back-classes");
+  const crumbMain = $("crumb-reset-main");
+  const crumbSep2 = $("crumb-reset-sep-2");
+  const crumbSub = $("crumb-reset-sub");
+  const searchInput = $("coord-reset-search");
 
-  const term = searchTerm.toLowerCase();
-  const filteredStudents = students.filter(s => 
-    s.name.toLowerCase().includes(term) || 
-    (s.turma && s.turma.toLowerCase().includes(term))
-  );
+  if (!grid || !list) return;
 
-  if (filteredStudents.length === 0) {
-    list.innerHTML = `<p style="text-align:center; padding:32px; color:#888;">Nenhum aluno encontrado.</p>`;
+  const term = searchTerm ? searchTerm.trim().toLowerCase() : "";
+
+  // ── CENÁRIO 1: BUSCA ATIVA POR NOME OU TURMA ──
+  if (term.length > 0) {
+    grid.classList.add("hidden");
+    list.classList.remove("hidden");
+
+    if (crumbMain) {
+      crumbMain.className = "crumb-link";
+      crumbMain.style.cursor = "pointer";
+    }
+    if (crumbSep2) crumbSep2.classList.remove("hidden");
+    if (crumbSub) {
+      crumbSub.classList.remove("hidden");
+      crumbSub.textContent = "Resultados da busca";
+    }
+    if (title) title.textContent = "Resultados da Busca";
+    if (btnBack) btnBack.textContent = "← Voltar às Turmas";
+
+    list.innerHTML = "";
+    const filteredStudents = students.filter(s => 
+      s.name.toLowerCase().includes(term) || 
+      (s.turma && s.turma.toLowerCase().includes(term))
+    );
+
+    if (filteredStudents.length === 0) {
+      list.innerHTML = `
+        <div style="text-align:center; padding: 48px 20px; background: #fff; border-radius: 20px; border: 1.5px dashed #d5c8b8; color: #8c7b6d;">
+          <p style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Nenhum aluno encontrado para "${searchTerm}".</p>
+          <p style="font-size: 14px;">Tente pesquisar por outro nome ou turma.</p>
+        </div>
+      `;
+      return;
+    }
+
+    filteredStudents.forEach(a => {
+      const row = document.createElement("div");
+      row.className = "stitch-student-row";
+      row.innerHTML = `
+        <div class="stitch-student-left">
+          <div class="stitch-avatar" id="reset-avatar-${a.id}">${a.initials}</div>
+          <span class="stitch-name">${a.name} <span style="font-size: 13px; color: #888; font-weight: normal;">(${a.turma})</span></span>
+        </div>
+        <div class="stitch-actions">
+          <button class="btn-reset-pin" data-action="senha" data-id="${a.id}">
+            🔑 Resetar Senha
+          </button>
+        </div>
+      `;
+      list.appendChild(row);
+    });
+
+    // Foto do aluno via URL assinada
+    filteredStudents.forEach(async a => {
+      try {
+        const res = await fetch(`${FACE_BACKEND_URL}/foto-assinada/${a.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.url) {
+            const avatarEl = document.getElementById(`reset-avatar-${a.id}`);
+            if (avatarEl) {
+              avatarEl.innerHTML = `<img src="${data.url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Foto do aluno" />`;
+              avatarEl.style.background = "transparent";
+            }
+          }
+        }
+      } catch(e) {}
+    });
+
+    list.querySelectorAll("[data-action='senha']").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.id;
+        const s = students.find(x => String(x.id) === String(id));
+        if (s) openNewPasswordView(s);
+      });
+    });
+
     return;
   }
 
-  filteredStudents.forEach(a => {
-    const row = document.createElement("div");
-    row.className = "stitch-student-row";
-    row.innerHTML = `
-      <div class="stitch-student-left">
-        <div class="stitch-avatar">${a.initials}</div>
-        <span class="stitch-name">${a.name} <span style="font-size: 13px; color: #888; font-weight: normal;">(${a.turma})</span></span>
+  // ── CENÁRIO 2: TURMA ESPECÍFICA SELECIONADA ──
+  if (currentResetSelectedTurma) {
+    grid.classList.add("hidden");
+    list.classList.remove("hidden");
+
+    if (crumbMain) {
+      crumbMain.className = "crumb-link";
+      crumbMain.style.cursor = "pointer";
+    }
+    if (crumbSep2) crumbSep2.classList.remove("hidden");
+    if (crumbSub) {
+      crumbSub.classList.remove("hidden");
+      crumbSub.textContent = `Turma ${currentResetSelectedTurma}`;
+    }
+    if (title) title.textContent = `Resetar Senha – Turma ${currentResetSelectedTurma}`;
+    if (btnBack) btnBack.textContent = "← Voltar às Turmas";
+
+    list.innerHTML = "";
+    const alunosDaTurma = students.filter(s => s.turma === currentResetSelectedTurma);
+
+    if (alunosDaTurma.length === 0) {
+      list.innerHTML = `
+        <div style="text-align:center; padding: 48px 20px; background: #fff; border-radius: 20px; border: 1.5px dashed #d5c8b8; color: #8c7b6d;">
+          <p style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Nenhum aluno cadastrado na turma ${currentResetSelectedTurma}.</p>
+          <p style="font-size: 14px;">Cadastre novos alunos ou selecione outra turma.</p>
+        </div>
+      `;
+      return;
+    }
+
+    alunosDaTurma.forEach(a => {
+      const row = document.createElement("div");
+      row.className = "stitch-student-row";
+      row.innerHTML = `
+        <div class="stitch-student-left">
+          <div class="stitch-avatar" id="reset-avatar-${a.id}">${a.initials}</div>
+          <span class="stitch-name">${a.name}</span>
+        </div>
+        <div class="stitch-actions">
+          <button class="btn-reset-pin" data-action="senha" data-id="${a.id}">
+            🔑 Resetar Senha
+          </button>
+        </div>
+      `;
+      list.appendChild(row);
+    });
+
+    // Foto do aluno via URL assinada
+    alunosDaTurma.forEach(async a => {
+      try {
+        const res = await fetch(`${FACE_BACKEND_URL}/foto-assinada/${a.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.url) {
+            const avatarEl = document.getElementById(`reset-avatar-${a.id}`);
+            if (avatarEl) {
+              avatarEl.innerHTML = `<img src="${data.url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Foto do aluno" />`;
+              avatarEl.style.background = "transparent";
+            }
+          }
+        }
+      } catch(e) {}
+    });
+
+    list.querySelectorAll("[data-action='senha']").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.id;
+        const s = students.find(x => String(x.id) === String(id));
+        if (s) openNewPasswordView(s);
+      });
+    });
+
+    return;
+  }
+
+  // ── CENÁRIO 3: GRID DE TURMAS (IGUAL AO PAINEL DE COORDENAÇÃO) ──
+  grid.classList.remove("hidden");
+  list.classList.add("hidden");
+
+  if (crumbMain) {
+    crumbMain.className = "crumb-current";
+    crumbMain.style.cursor = "default";
+  }
+  if (crumbSep2) crumbSep2.classList.add("hidden");
+  if (crumbSub) crumbSub.classList.add("hidden");
+  if (title) title.textContent = "Resetar Senha de Alunos";
+  if (btnBack) btnBack.textContent = "← Voltar ao Painel";
+
+  grid.innerHTML = "";
+  const turmasParaReset = ALL_TURMAS.filter(turma => turma !== "Exceções");
+  turmasParaReset.forEach(turma => {
+    const alunosDaTurma = students.filter(s => s.turma === turma);
+    const totalAlunos = alunosDaTurma.length;
+
+    const card = document.createElement("div");
+    card.className = "coord-class-card";
+    card.setAttribute("role", "button");
+    card.setAttribute("tabindex", "0");
+    card.setAttribute("title", `Clique para gerenciar senhas da turma ${turma}`);
+
+    card.innerHTML = `
+      <div class="coord-card-header">
+        <h3 class="coord-class-name">${turma}</h3>
       </div>
-      <div class="stitch-actions">
-        <button class="btn-reset-pin" data-action="senha" data-id="${a.id}">
-          🔑 Resetar Senha
-        </button>
+      <div class="coord-class-stats">
+        <div class="coord-stat-col">
+          <svg class="coord-stat-svg" viewBox="0 0 24 24" fill="none" stroke="#2D5A43" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <div class="coord-stat-info">
+            <span class="coord-stat-num">${totalAlunos}</span>
+            <span class="coord-stat-label">ALUNOS</span>
+          </div>
+        </div>
+        <div class="coord-stat-col">
+          <svg class="coord-stat-svg" viewBox="0 0 24 24" fill="none" stroke="#2D5A43" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7.5" cy="15.5" r="4.5"/>
+            <path d="M10.7 12.3L19 4"/>
+            <path d="M15 8l3 3"/>
+            <path d="M18 5l2 2"/>
+          </svg>
+          <div class="coord-stat-info">
+            <span class="coord-stat-num">${totalAlunos}</span>
+            <span class="coord-stat-label">SENHAS</span>
+          </div>
+        </div>
       </div>
     `;
-    list.appendChild(row);
-  });
 
-  list.querySelectorAll("[data-action='senha']").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const id = btn.dataset.id;
-      const s = students.find(x => String(x.id) === String(id));
-      if (s) openNewPasswordView(s);
+    const selectTurma = () => {
+      currentResetSelectedTurma = turma;
+      if (searchInput) searchInput.value = "";
+      renderResetView();
+    };
+
+    card.addEventListener("click", selectTurma);
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        selectTurma();
+      }
     });
+
+    grid.appendChild(card);
   });
 }
 
 if ($("btn-gestao-senhas")) {
   $("btn-gestao-senhas").addEventListener("click", () => {
     isResetViewOpen = true;
-    currentSelectedTurma = null; // Reseta seleção de turma se houver
+    currentSelectedTurma = null; // Reseta seleção de turma da coordenação
+    currentResetSelectedTurma = null; // Inicia no grid de turmas do reset
+    if ($("coord-reset-search")) $("coord-reset-search").value = "";
     renderCoord();
   });
 }
 
 if ($("btn-reset-back-classes")) {
   $("btn-reset-back-classes").addEventListener("click", () => {
-    isResetViewOpen = false;
-    renderCoord();
+    const searchInput = $("coord-reset-search");
+    if (searchInput && searchInput.value.trim().length > 0) {
+      searchInput.value = "";
+      renderResetView();
+    } else if (currentResetSelectedTurma !== null) {
+      currentResetSelectedTurma = null;
+      renderResetView();
+    } else {
+      isResetViewOpen = false;
+      renderCoord();
+    }
   });
 }
+
 if ($("crumb-reset-to-classes")) {
   $("crumb-reset-to-classes").addEventListener("click", () => {
     isResetViewOpen = false;
+    currentResetSelectedTurma = null;
+    if ($("coord-reset-search")) $("coord-reset-search").value = "";
     renderCoord();
+  });
+}
+
+if ($("crumb-reset-main")) {
+  $("crumb-reset-main").addEventListener("click", () => {
+    if (currentResetSelectedTurma !== null || ($("coord-reset-search") && $("coord-reset-search").value.trim().length > 0)) {
+      currentResetSelectedTurma = null;
+      if ($("coord-reset-search")) $("coord-reset-search").value = "";
+      renderResetView();
+    }
   });
 }
 

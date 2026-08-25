@@ -211,21 +211,33 @@
       <div id="coord-view-reset" class="hidden">
         <nav class="coord-breadcrumb" aria-label="Navegação">
           <span class="crumb-link" id="crumb-reset-to-classes">Coordenação</span>
-          <span class="crumb-sep">›</span>
-          <span class="crumb-current">Gestão de Senhas</span>
+          <span class="crumb-sep" id="crumb-reset-sep-1">›</span>
+          <span class="crumb-current" id="crumb-reset-main">Gestão de Senhas</span>
+          <span class="crumb-sep hidden" id="crumb-reset-sep-2">›</span>
+          <span class="crumb-current hidden" id="crumb-reset-sub">Turma</span>
         </nav>
 
         <div class="coord-students-header">
-          <h2 class="coord-students-title">Resetar Senha de Alunos</h2>
+          <h2 class="coord-students-title" id="coord-reset-title">Resetar Senha de Alunos</h2>
           <button class="btn-back-classes" id="btn-reset-back-classes">← Voltar ao Painel</button>
         </div>
 
-        <div style="margin-bottom: 20px;">
-          <input type="text" id="coord-reset-search" class="field-inp" placeholder="Buscar aluno por nome ou turma..." style="max-width: 100%;">
+        <div style="margin-bottom: 24px; position: relative;">
+          <input type="text" id="coord-reset-search" class="field-inp" placeholder="Buscar aluno por nome ou turma..." style="max-width: 100%; padding-left: 42px;">
+          <svg style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #8C7E72; pointer-events: none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
         </div>
 
-        <div class="coord-students-list" id="coord-reset-list">
-          <!-- Lista de todos os alunos gerada via JS -->
+        <!-- Grid de Turmas para reset de senha (igual à imagem 2) -->
+        <div class="coord-classes-grid" id="coord-reset-classes-grid">
+          <!-- Cards das 11 turmas gerados dinamicamente via JS -->
+        </div>
+
+        <!-- Lista de Alunos da Turma selecionada ou Resultados de Busca -->
+        <div class="coord-students-list hidden" id="coord-reset-list">
+          <!-- Linhas de alunos inseridas dinamicamente -->
         </div>
       </div>
 
@@ -235,6 +247,8 @@
           <span class="crumb-link" id="crumb-newpwd-to-classes">Coordenação</span>
           <span class="crumb-sep">›</span>
           <span class="crumb-link" id="crumb-newpwd-to-reset">Gestão de Senhas</span>
+          <span class="crumb-sep hidden" id="crumb-newpwd-sep-turma">›</span>
+          <span class="crumb-link hidden" id="crumb-newpwd-to-turma">Turma</span>
           <span class="crumb-sep">›</span>
           <span class="crumb-current">Nova Senha</span>
         </nav>
