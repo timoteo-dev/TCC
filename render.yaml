@@ -16,3 +16,5 @@ services:
       # Variável que diz ao InsightFace para baixar os modelos no diretório local do app na nuvem
       - key: INSIGHTFACE_HOME
         value: ./models
+      - key: PYTHON_VERSION
+        value: 3.11.9
