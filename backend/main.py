@@ -18,7 +18,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 THRESHOLD = float(os.getenv("FACE_MATCH_THRESHOLD", "0.36"))
-MODEL_NAME = 'buffalo_l'
+MODEL_NAME = 'buffalo_s'
 
 app = FastAPI(title="Reconhecimento Facial API")
 
