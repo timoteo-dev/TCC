@@ -8,7 +8,7 @@
 
 const SUPABASE_URL = "https://sifhqlbobxaofeypjnhd.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpZmhxbGJvYnhhb2ZleXBqbmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxMDYzNTIsImV4cCI6MjA5ODY4MjM1Mn0.tECc42Xbmya3s7rafycICTqMQAMIMTjhH3Te7bZRofI";
-const FACE_BACKEND_URL = "http://127.0.0.1:8000";
+const FACE_BACKEND_URL = "https://badland-twisty-unsold.ngrok-free.dev";
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -1337,6 +1337,11 @@ async function identificarRostoNoBackend() {
     const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", 0.9));
     const formData = new FormData();
     formData.append("file", blob, "frame.jpg");
+    
+    const selectEl = document.getElementById("facial-turma");
+    if (selectEl && selectEl.value) {
+      formData.append("turma_id", selectEl.value);
+    }
     
     const res = await fetch(`${FACE_BACKEND_URL}/identify`, {
       method: "POST",

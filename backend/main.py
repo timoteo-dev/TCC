@@ -42,7 +42,7 @@ class MemoryStorage:
     def save_embedding(self, aluno_id: int, embedding: np.ndarray, model_version: str):
         self.embeddings[aluno_id] = embedding
         
-    def get_all_embeddings(self):
+    def get_all_embeddings(self, turma_id: str = None):
         return self.embeddings
         
     def save_photo(self, aluno_id: int, photo_bytes: bytes):
@@ -69,11 +69,12 @@ class SupabaseStorage:
             """, (embedding, model_version, aluno_id))
         self.conn.commit()
         
-    def get_all_embeddings(self):
-        # Para produção com muitos alunos, ideal usar busca HNSW/IVFFlat direto no SQL no /identify.
-        # Aqui, mantemos compatibilidade trazendo os embeddings se a base for pequena.
+    def get_all_embeddings(self, turma_id: str = None):
         with self.conn.cursor() as cur:
-            cur.execute("SELECT id, embedding FROM alunos WHERE embedding IS NOT NULL AND model_version = %s", (MODEL_NAME,))
+            if turma_id:
+                cur.execute("SELECT id, embedding FROM alunos WHERE embedding IS NOT NULL AND model_version = %s AND turma_id = %s", (MODEL_NAME, turma_id))
+            else:
+                cur.execute("SELECT id, embedding FROM alunos WHERE embedding IS NOT NULL AND model_version = %s", (MODEL_NAME,))
             rows = cur.fetchall()
             return {row[0]: row[1] for row in rows}
             
@@ -140,7 +141,7 @@ async def enroll(aluno_id: int = Form(...), file: UploadFile = File(...)):
     return {"status": "success", "aluno_id": aluno_id}
 
 @app.post("/identify")
-async def identify(file: UploadFile = File(...)):
+async def identify(file: UploadFile = File(...), turma_id: str = Form(None)):
     contents = await file.read()
     nparr = np.frombuffer(contents, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -156,7 +157,7 @@ async def identify(file: UploadFile = File(...)):
     # Se estivéssemos usando pgvector para tudo no banco, faríamos uma query:
     # SELECT id FROM alunos ORDER BY embedding <=> %s LIMIT 1
     # Para simplicidade e atender aos dois storages (Memory/Supabase):
-    all_embeddings = storage.get_all_embeddings()
+    all_embeddings = storage.get_all_embeddings(turma_id=turma_id)
     if not all_embeddings:
         return {"match": False}
         

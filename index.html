@@ -56,6 +56,13 @@
           </div>
 
           <div class="field-group">
+            <label class="field-lbl">Escola</label>
+            <select class="field-inp" id="input-escola">
+              <option value="narceu" selected>Narceu de Paiva Filho</option>
+            </select>
+          </div>
+
+          <div class="field-group">
             <label class="field-lbl">Nome</label>
             <input class="field-inp" id="input-nome" type="text" placeholder="Seu nome completo" />
           </div>
@@ -312,7 +319,14 @@
 
       <div class="facial-main">
 
-        <div class="cam-controls">
+        <div class="field-group" style="margin-bottom: 24px; max-width: 400px; margin-inline: auto; text-align: left;">
+            <label class="field-lbl" style="color: var(--text-base);">Turma (Filtro Inteligente)</label>
+            <select class="field-inp" id="facial-turma">
+              <option value="" disabled selected>Selecione sua turma...</option>
+            </select>
+          </div>
+
+          <div class="cam-controls">
           <button class="btn-cam btn-cam-on" id="btn-cam-on">
             <span class="cam-btn-icon">📷</span>
             Ligar Câmera
