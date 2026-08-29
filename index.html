@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -29,74 +30,73 @@
   </nav>
 
   <section class="screen active" id="screen-login">
-    <div class="login-wrap">
-      <div class="login-left">
-        <div class="login-deco">
-          <span class="deco-num">Merenda</span>
-          <span class="deco-text">Sistema de<br/>Merenda Escolar</span>
+    <div class="login-wrap-centered">
+      <div class="login-card">
+        
+        <!-- Animação Nativa SIGME -->
+        <div class="sigme-animation-container" aria-hidden="true">
+          <div class="sigme-letters" id="sigme-anim-box">
+            <span class="sigme-letter">S</span>
+            <span class="sigme-letter">I</span>
+            <span class="sigme-letter">G</span>
+            <span class="sigme-letter">M</span>
+            <span class="sigme-letter">E</span>
+          </div>
         </div>
-        <div class="login-visual" aria-label="Animação de alimentos sendo servidos sobre uma mesa">
-          <video class="login-visual-video" autoplay muted loop playsinline preload="auto" poster="Gemini_Generated_Image_z3xctlz3xctlz3xc.avif">
-            <source src="assets/hero-merenda-loop.mp4" type="video/mp4" />
-          </video>
+
+        <div class="lc-header" style="margin-top: 24px;">
+          <div class="lc-mark">🍽️</div>
+          <h1 class="lc-title">Bem-vindo</h1>
+          <p class="lc-sub">Selecione seu perfil e acesse o sistema</p>
         </div>
-      </div>
-      <div class="login-right">
-        <div class="login-card">
-          <div class="lc-header">
-            <div class="lc-mark">🍽️</div>
-            <h1 class="lc-title">Bem-vindo</h1>
-            <p class="lc-sub">Selecione seu perfil e acesse o sistema</p>
-          </div>
 
-          <div class="role-row">
-            <button class="role-btn active" data-role="aluno">Aluno</button>
-            <button class="role-btn" data-role="coordenacao">Coordenação</button>
-            <button class="role-btn" data-role="cozinha">Cozinha</button>
-          </div>
-
-          <div class="field-group">
-            <label class="field-lbl">Escola</label>
-            <select class="field-inp" id="input-escola">
-              <option value="narceu" selected>Narceu de Paiva Filho</option>
-            </select>
-          </div>
-
-          <div class="field-group">
-            <label class="field-lbl">Nome</label>
-            <input class="field-inp" id="input-nome" type="text" placeholder="Seu nome completo" />
-          </div>
-          
-          <div class="field-group hidden" id="group-email">
-            <label class="field-lbl">E-mail</label>
-            <input class="field-inp" id="input-email" type="email" placeholder="seu.email@escola.com" />
-          </div>
-
-          <div class="field-group" id="group-turma">
-            <label class="field-lbl">Turma</label>
-            <select class="field-inp" id="input-turma">
-              <option value="" disabled selected>Selecione sua turma...</option>
-              <option value="1A">1º Ano A</option>
-              <option value="1B">1º Ano B</option>
-              <option value="2A">2º Ano A</option>
-              <option value="3A">3º Ano A</option>
-            </select>
-          </div>
-
-          <div class="field-group">
-            <label class="field-lbl">Senha</label>
-            <input class="field-inp" id="input-senha" type="password" placeholder="Sua senha" />
-          </div>
-
-          <div class="login-error hidden" id="login-error">
-            Nome e senha são obrigatórios.
-          </div>
-
-          <button class="btn-enter" id="btn-login">Entrar no sistema →</button>
-
-
-
+        <div class="role-row">
+          <button class="role-btn active" data-role="aluno">Aluno</button>
+          <button class="role-btn" data-role="coordenacao">Coordenação</button>
+          <button class="role-btn" data-role="cozinha">Cozinha</button>
         </div>
+
+        <div class="field-group">
+          <label class="field-lbl">Escola</label>
+          <select class="field-inp" id="input-escola">
+            <option value="narceu" selected>Narceu de Paiva Filho</option>
+          </select>
+        </div>
+
+        <div class="field-group" id="group-nome">
+          <label class="field-lbl">Nome</label>
+          <select class="field-inp" id="input-nome" disabled>
+            <option value="" disabled selected>Selecione a turma primeiro...</option>
+          </select>
+        </div>
+        
+        <div class="field-group hidden" id="group-email">
+          <label class="field-lbl">E-mail</label>
+          <input class="field-inp" id="input-email" type="email" placeholder="seu.email@escola.com" />
+        </div>
+
+        <div class="field-group" id="group-turma">
+          <label class="field-lbl">Turma</label>
+          <select class="field-inp" id="input-turma">
+            <option value="" disabled selected>Selecione sua turma...</option>
+            <option value="1A">1º Ano A</option>
+            <option value="1B">1º Ano B</option>
+            <option value="2A">2º Ano A</option>
+            <option value="3A">3º Ano A</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label class="field-lbl">Senha</label>
+          <input class="field-inp" id="input-senha" type="password" placeholder="Sua senha" />
+        </div>
+
+        <div class="login-error hidden" id="login-error">
+          Nome e senha são obrigatórios.
+        </div>
+
+        <button class="btn-enter" id="btn-login">Entrar no sistema →</button>
+
       </div>
     </div>
   </section>
@@ -183,6 +183,7 @@
             <p class="coord-date" id="coord-date"></p>
           </div>
           <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button class="btn-excecao" id="btn-gestao-facial" style="background: transparent; color: #3b82f6; border: 2px solid #3b82f6;">📷 Gestão Facial</button>
             <button class="btn-excecao" id="btn-gestao-senhas" style="background: transparent; color: #801d1c; border: 2px solid #801d1c;">🔑 Gestão de Senhas</button>
             <button class="btn-excecao" id="btn-cadastrar-aluno" style="background: transparent; color: #DF8235; border: 2px solid #DF8235;">Cadastrar Aluno</button>
             <button class="btn-excecao" id="btn-add-excecao">Adicionar Exceção</button>
@@ -281,7 +282,61 @@
             </button>
           </div>
         </form>
+        </div>
+
+      <!-- VISÃO 4: GESTÃO FACIAL -->
+      <div id="coord-view-facial" class="hidden">
+        <nav class="coord-breadcrumb" aria-label="Navegação">
+          <span class="crumb-link" id="crumb-to-classes-facial">Coordenação</span>
+          <span class="crumb-sep">›</span>
+          <span class="crumb-current">Gestão Facial</span>
+        </nav>
+
+        <div class="coord-students-header" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+          <h2 class="coord-students-title">Registro Facial</h2>
+          <p class="coord-date" style="font-size: 15px;">Selecione o aluno e posicione-se em frente à câmera para registrar a biometria.</p>
+        </div>
+
+        <div style="background: #fff; padding: 24px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.03); max-width: 600px; margin-top: 24px;">
+          <div class="field-group">
+            <label class="field-lbl" for="facial-select-turma">1. SELECIONE A TURMA</label>
+            <select class="field-inp" id="facial-select-turma" required style="cursor: pointer; background: #faf8f5;">
+              <option value="" disabled selected>Carregando turmas...</option>
+            </select>
+          </div>
+
+          <div class="field-group" style="margin-top: 16px;">
+            <label class="field-lbl" for="facial-select-aluno">2. SELECIONE O ALUNO</label>
+            <select class="field-inp" id="facial-select-aluno" required disabled style="cursor: pointer; background: #faf8f5;">
+              <option value="" disabled selected>Selecione a turma primeiro...</option>
+            </select>
+          </div>
+
+          <div id="facial-camera-section" class="hidden" style="margin-top: 24px; text-align: center; padding-top: 24px; border-top: 1px solid var(--border);">
+            <div style="width: 100%; max-width: 320px; aspect-ratio: 1; background: #eee; border-radius: 12px; overflow: hidden; margin: 0 auto; position: relative; border: 2px solid #e2e8f0;">
+              <video id="facial-cam-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+              <canvas id="facial-cam-canvas" style="display: none;"></canvas>
+            </div>
+            <p id="facial-cam-status" style="font-size: 14px; color: #64748b; margin-top: 12px; font-weight: 500;">Aguardando seleção...</p>
+            
+            <div style="display: flex; gap: 12px; justify-content: center; margin-top: 20px;">
+              <button type="button" class="btn-cancel-excecao hidden" id="btn-facial-capture" style="border: 2px solid #3b82f6; color: #3b82f6; font-weight: 600;">📸 Tirar Foto</button>
+              <button type="button" class="btn-cancel-excecao hidden" id="btn-facial-retake">Refazer</button>
+            </div>
+
+            <div style="margin-top: 24px;">
+              <button type="button" class="btn-submit-excecao" id="btn-facial-save" disabled style="width: 100%; max-width: 320px; position: relative;">
+                <span class="btn-txt">Salvar Nova Foto</span>
+                <span class="btn-loader hidden">...</span>
+              </button>
+            </div>
+            
+            <div id="facial-error-msg" class="login-error hidden" style="margin-top: 16px; text-align: center;">Erro</div>
+          </div>
+        </div>
       </div>
+
+    </div>
 
     </div>
   </section>
@@ -319,7 +374,15 @@
 
       <div class="facial-main">
 
-        <div class="field-group" style="margin-bottom: 24px; max-width: 400px; margin-inline: auto; text-align: left;">
+          <div class="field-group" style="margin-bottom: 16px; max-width: 400px; margin-inline: auto; text-align: left;">
+            <label class="field-lbl" style="color: var(--text-base);">Escola</label>
+            <select class="field-inp" id="facial-escola">
+              <option value="" disabled selected>Selecione a escola...</option>
+              <option value="narceu">Narceu de Paiva Filho</option>
+            </select>
+          </div>
+          
+          <div class="field-group" style="margin-bottom: 24px; max-width: 400px; margin-inline: auto; text-align: left;">
             <label class="field-lbl" style="color: var(--text-base);">Turma (Filtro Inteligente)</label>
             <select class="field-inp" id="facial-turma">
               <option value="" disabled selected>Selecione sua turma...</option>
@@ -327,7 +390,7 @@
           </div>
 
           <div class="cam-controls">
-          <button class="btn-cam btn-cam-on" id="btn-cam-on">
+          <button class="btn-cam btn-cam-on" id="btn-cam-on" disabled>
             <span class="cam-btn-icon">📷</span>
             Ligar Câmera
           </button>
@@ -481,6 +544,7 @@
 
   <div class="toast hidden" id="toast"></div>
 
+
   <!-- Modal Cadastrar Aluno -->
   <div class="modal-backdrop hidden" id="modal-cadastro-aluno">
     <div class="modal-box excecao-modal-box">
@@ -540,6 +604,6 @@
     </div>
   </div>
 
-  <script src="script.js?v=20260806-1"></script>
+  <script src="script.js?v=20260828-1"></script>
 </body>
 </html>

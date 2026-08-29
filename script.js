@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════════════════
    MERENDA ESCOLAR — app.js
    Lógica de navegação, pedidos, coordenação, cozinha
-   e reconhecimento facial com BlazeFace (TF.js)
+   e reconhecimento facial via API Python backend
    ══════════════════════════════════════════════════════════ */
 
 "use strict";
@@ -34,12 +34,62 @@ async function carregarTurmasLogin() {
     const options = data.map(t => `<option value="${t.id}">${t.nome}</option>`).join("");
     selectTurmaCad.innerHTML = `<option value="" disabled selected>Selecione a turma...</option>` + options;
   }
+  
+  const selectTurmaFacial = $("facial-turma");
+  if (selectTurmaFacial) {
+    const options = data.map(t => `<option value="${t.id}">${t.nome}</option>`).join("");
+    selectTurmaFacial.innerHTML = `<option value="" disabled selected>Selecione sua turma...</option>` + options;
+  }
 }
 
 // Chame a função automaticamente quando a página carregar
 window.addEventListener('DOMContentLoaded', () => {
   carregarTurmasLogin();
+  initSigmeAnimation();
 });
+
+/* ══════════════════════════════════════════════════════════
+   ANIMAÇÃO SIGME (Scramble)
+   ══════════════════════════════════════════════════════════ */
+function initSigmeAnimation() {
+  const letters = document.querySelectorAll('.sigme-letter');
+  if (!letters.length) return;
+
+  function scrambleAndAssemble() {
+    letters.forEach(letter => {
+      // Desativa transição para saltar instantaneamente para a posição embaralhada invisível
+      letter.style.transition = 'none';
+      letter.classList.remove('assembled');
+      
+      // Gera posições e rotações 3D aleatórias
+      const tx = (Math.random() - 0.5) * 200;
+      const ty = (Math.random() - 0.5) * 200;
+      const tz = (Math.random() - 0.5) * 300;
+      const rx = (Math.random() - 0.5) * 360;
+      const ry = (Math.random() - 0.5) * 360;
+      const rz = (Math.random() - 0.5) * 360;
+      
+      letter.style.transform = `translate3d(${tx}px, ${ty}px, ${tz}px) rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg)`;
+    });
+
+    // Força reflow (leitura de propriedade síncrona) para o navegador aplicar a posição bagunçada antes de animar
+    void document.body.offsetHeight;
+
+    // Aguarda um instante e então reativa as transições para "montar" a palavra
+    setTimeout(() => {
+      letters.forEach(letter => {
+        letter.style.transition = 'transform 1.8s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 1.2s ease';
+        letter.classList.add('assembled');
+      });
+    }, 50);
+  }
+
+  // Inicia a primeira animação
+  scrambleAndAssemble();
+
+  // Define o loop a cada 4 segundos
+  setInterval(scrambleAndAssemble, 4000);
+}
 
 /* ── DADOS ───────────────────────────────────────────────── */
 const ALL_TURMAS = [
@@ -180,19 +230,60 @@ $$(".role-btn").forEach(btn => {
     // Mostra a escolha de Turma apenas se o perfil selecionado for 'Aluno'
     const groupTurma = $("group-turma");
     const groupEmail = $("group-email");
+    const groupNome = $("group-nome");
     if (activeRole === "aluno") {
       groupTurma.classList.remove("hidden");
+      if (groupNome) groupNome.classList.remove("hidden");
       groupEmail.classList.add("hidden");
     } else {
       groupTurma.classList.add("hidden");
+      if (groupNome) groupNome.classList.add("hidden");
       groupEmail.classList.remove("hidden");
     }
   });
 });
 
+if ($("input-turma")) {
+  $("input-turma").addEventListener("change", async (e) => {
+    const turmaId = e.target.value;
+    const selectNome = $("input-nome");
+    if (!selectNome) return;
+    
+    if (!turmaId) {
+      selectNome.innerHTML = '<option value="" disabled selected>Selecione a turma primeiro...</option>';
+      selectNome.disabled = true;
+      return;
+    }
+    
+    selectNome.innerHTML = '<option value="" disabled selected>Carregando alunos...</option>';
+    selectNome.disabled = true;
+    
+    const { data, error } = await db
+      .from("alunos")
+      .select("id, nome")
+      .eq("turma_id", turmaId)
+      .order("nome");
+      
+    if (error) {
+      console.error("Erro ao buscar alunos:", error);
+      selectNome.innerHTML = '<option value="" disabled selected>Erro ao carregar</option>';
+      return;
+    }
+    
+    if (data.length === 0) {
+      selectNome.innerHTML = '<option value="" disabled selected>Nenhum aluno nesta turma</option>';
+      return;
+    }
+    
+    const options = data.map(al => `<option value="${al.nome}">${al.nome}</option>`).join("");
+    selectNome.innerHTML = '<option value="" disabled selected>Selecione seu nome...</option>' + options;
+    selectNome.disabled = false;
+  });
+}
+
 // Lógica de Entrar (Login)
 $("btn-login").addEventListener("click", async () => {
-  const inputNome = $("input-nome").value.trim();
+  const inputNome = $("input-nome").value ? $("input-nome").value.trim() : "";
   const inputSenha = $("input-senha").value.trim();
   const inputTurma = $("input-turma").value;
   const inputEmail = $("input-email").value.trim();
@@ -582,6 +673,7 @@ function renderCoord() {
             }
           });
         });
+
 
         // Event listener removido da VISÃO 2. Senhas agora resetadas na VISÃO 3.
 
@@ -1205,7 +1297,7 @@ function syncCozinha() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   RECONHECIMENTO FACIAL — BlazeFace + TensorFlow.js
+   RECONHECIMENTO FACIAL — Envio de Frames para API Backend
    ══════════════════════════════════════════════════════════ */
 
 let camStream  = null;
@@ -1213,6 +1305,24 @@ let detectionInterval = null;
 let scanDone   = false;
 
 const VIDEO  = $("cam-video");
+
+function checkFacialFields() {
+  if (facialActive) return;
+  const escola = $("facial-escola");
+  const turma = $("facial-turma");
+  const btn = $("btn-cam-on");
+  
+  if (escola && turma && btn) {
+    if (escola.value && turma.value) {
+      btn.disabled = false;
+    } else {
+      btn.disabled = true;
+    }
+  }
+}
+
+if ($("facial-escola")) $("facial-escola").addEventListener("change", checkFacialFields);
+if ($("facial-turma")) $("facial-turma").addEventListener("change", checkFacialFields);
 
 $("btn-cam-on").addEventListener("click", () => initFacial());
 $("btn-cam-off").addEventListener("click", () => stopCamera());
@@ -1246,7 +1356,7 @@ function stopCamera() {
   showOverlay(true, "Câmara pausada. Pressione 'Ligar Câmara' para iniciar.");
   setStatus("gray", "Câmara desativada");
 
-  $("btn-cam-on").disabled = false;
+  checkFacialFields();
   $("btn-cam-off").disabled = true;
 }
 
@@ -1303,7 +1413,7 @@ async function initFacial() {
     facialActive = false;
     
     // Devolve o controlo para o utilizador tentar novamente
-    $("btn-cam-on").disabled = false;
+    checkFacialFields();
     $("btn-cam-off").disabled = true;
   }
 }
@@ -1616,6 +1726,205 @@ if ($("form-cadastro-aluno")) {
       setTimeout(() => toast.classList.add("hidden"), 3000);
     } else {
       alert(`Aluno(a) ${nome} cadastrado(a) com sucesso!`);
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
+   VISÃO 4: GESTÃO FACIAL (NOVA TELA)
+   ══════════════════════════════════════════════════════════ */
+let facialCamStream = null;
+let facialBlob = null;
+let selectedFacialAlunoId = null;
+
+const viewFacial = $("coord-view-facial");
+const viewClassesFacial = $("coord-view-classes");
+const btnGestaoFacial = $("btn-gestao-facial");
+const crumbToClassesFacial = $("crumb-to-classes-facial");
+
+const fSelectTurma = $("facial-select-turma");
+const fSelectAluno = $("facial-select-aluno");
+
+const fCamSection = $("facial-camera-section");
+const fVideo = $("facial-cam-video");
+const fCanvas = $("facial-cam-canvas");
+const fStatus = $("facial-cam-status");
+const fBtnCapture = $("btn-facial-capture");
+const fBtnRetake = $("btn-facial-retake");
+const fBtnSave = $("btn-facial-save");
+const fErrorMsg = $("facial-error-msg");
+
+function openGestaoFacial() {
+  if (viewClassesFacial) viewClassesFacial.classList.add("hidden");
+  if ($("coord-view-students")) $("coord-view-students").classList.add("hidden");
+  if ($("coord-view-reset")) $("coord-view-reset").classList.add("hidden");
+  if ($("coord-view-new-password")) $("coord-view-new-password").classList.add("hidden");
+  
+  if (viewFacial) viewFacial.classList.remove("hidden");
+
+  // Reset estado
+  stopFacialCamera();
+  fCamSection.classList.add("hidden");
+  fSelectTurma.innerHTML = '<option value="" disabled selected>Selecione a turma...</option>';
+  fSelectAluno.innerHTML = '<option value="" disabled selected>Selecione a turma primeiro...</option>';
+  fSelectAluno.disabled = true;
+
+  // Popula turmas
+  ALL_TURMAS.forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t;
+    opt.textContent = t;
+    fSelectTurma.appendChild(opt);
+  });
+}
+
+function closeGestaoFacial() {
+  if (viewFacial) viewFacial.classList.add("hidden");
+  stopFacialCamera();
+  renderCoord(); // Volta pra view de turmas
+}
+
+function startFacialCamera() {
+  fStatus.textContent = "Iniciando câmera...";
+  fCamSection.classList.remove("hidden");
+  fVideo.style.display = "block";
+  fCanvas.style.display = "none";
+  fBtnCapture.classList.remove("hidden");
+  fBtnRetake.classList.add("hidden");
+  fBtnSave.disabled = true;
+  fErrorMsg.classList.add("hidden");
+  facialBlob = null;
+
+  navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 320, facingMode: "user" } })
+    .then(stream => {
+      facialCamStream = stream;
+      fVideo.srcObject = stream;
+      fStatus.textContent = "Câmera pronta! Centralize o rosto e capture.";
+    })
+    .catch(err => {
+      console.error(err);
+      fStatus.textContent = "Erro: Acesso à câmera bloqueado ou indisponível. (Utilize HTTPS ou localhost)";
+    });
+}
+
+function stopFacialCamera() {
+  if (facialCamStream) {
+    facialCamStream.getTracks().forEach(t => t.stop());
+    facialCamStream = null;
+  }
+  if (fVideo) fVideo.srcObject = null;
+}
+
+if (btnGestaoFacial) btnGestaoFacial.addEventListener("click", openGestaoFacial);
+if (crumbToClassesFacial) crumbToClassesFacial.addEventListener("click", closeGestaoFacial);
+
+if (fSelectTurma) {
+  fSelectTurma.addEventListener("change", () => {
+    const turma = fSelectTurma.value;
+    fSelectAluno.innerHTML = '<option value="" disabled selected>Selecione o aluno...</option>';
+    fSelectAluno.disabled = false;
+    stopFacialCamera();
+    fCamSection.classList.add("hidden");
+
+    const alunosTurma = students.filter(s => s.turma === turma).sort((a,b) => a.name.localeCompare(b.name));
+    alunosTurma.forEach(a => {
+      const opt = document.createElement("option");
+      opt.value = a.id;
+      opt.textContent = a.name;
+      fSelectAluno.appendChild(opt);
+    });
+  });
+}
+
+if (fSelectAluno) {
+  fSelectAluno.addEventListener("change", () => {
+    selectedFacialAlunoId = fSelectAluno.value;
+    if (selectedFacialAlunoId) {
+      startFacialCamera();
+    }
+  });
+}
+
+if (fBtnCapture) {
+  fBtnCapture.addEventListener("click", () => {
+    if (!facialCamStream) return;
+    
+    fCanvas.width = fVideo.videoWidth || 320;
+    fCanvas.height = fVideo.videoHeight || 320;
+    const ctx = fCanvas.getContext("2d");
+    
+    ctx.translate(fCanvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(fVideo, 0, 0, fCanvas.width, fCanvas.height);
+    
+    fVideo.style.display = "none";
+    fCanvas.style.display = "block";
+    fBtnCapture.classList.add("hidden");
+    fBtnRetake.classList.remove("hidden");
+    fBtnSave.disabled = false;
+    fStatus.textContent = "Foto capturada! Salve para registrar na base.";
+    
+    fCanvas.toBlob(blob => {
+      facialBlob = blob;
+    }, "image/jpeg", 0.9);
+  });
+}
+
+if (fBtnRetake) {
+  fBtnRetake.addEventListener("click", () => {
+    facialBlob = null;
+    fCanvas.style.display = "none";
+    fVideo.style.display = "block";
+    fBtnRetake.classList.add("hidden");
+    fBtnCapture.classList.remove("hidden");
+    fBtnSave.disabled = true;
+    fStatus.textContent = "Câmera pronta! Centralize o rosto e capture.";
+  });
+}
+
+if (fBtnSave) {
+  fBtnSave.addEventListener("click", async () => {
+    if (!facialBlob || !selectedFacialAlunoId) return;
+    
+    const txt = fBtnSave.querySelector(".btn-txt");
+    const loader = fBtnSave.querySelector(".btn-loader");
+    
+    if (txt) txt.classList.add("hidden");
+    if (loader) loader.classList.remove("hidden");
+    fBtnSave.disabled = true;
+    fErrorMsg.classList.add("hidden");
+    fStatus.textContent = "Enviando biometria facial...";
+    
+    const formData = new FormData();
+    formData.append("aluno_id", selectedFacialAlunoId);
+    formData.append("file", facialBlob, "nova_foto_facial.jpg");
+    
+    try {
+      const res = await fetch(`${FACE_BACKEND_URL}/enroll`, {
+        method: "POST",
+        body: formData
+      });
+      
+      if (!res.ok) {
+        throw new Error("Falha no servidor: " + res.status);
+      }
+      
+      showToast("Biometria Facial registrada com sucesso!");
+      
+      // Reseta para o próximo
+      fSelectAluno.value = "";
+      stopFacialCamera();
+      fCamSection.classList.add("hidden");
+      
+    } catch(err) {
+      console.error(err);
+      fErrorMsg.textContent = "Erro ao enviar foto: " + err.message;
+      fErrorMsg.classList.remove("hidden");
+      fStatus.textContent = "Erro no envio.";
+    } finally {
+      if (txt) txt.classList.remove("hidden");
+      if (loader) loader.classList.add("hidden");
+      fBtnSave.disabled = false;
     }
   });
 }
