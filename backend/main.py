@@ -39,16 +39,16 @@ class MemoryStorage:
     def __init__(self):
         self.embeddings = {} # aluno_id: embedding
         
-    def save_embedding(self, aluno_id: int, embedding: np.ndarray, model_version: str):
+    def save_embedding(self, aluno_id: str, embedding: np.ndarray, model_version: str):
         self.embeddings[aluno_id] = embedding
         
     def get_all_embeddings(self, turma_id: str = None):
         return self.embeddings
         
-    def save_photo(self, aluno_id: int, photo_bytes: bytes):
+    def save_photo(self, aluno_id: str, photo_bytes: bytes):
         pass # Ignorado em memória
         
-    def get_photo_url(self, aluno_id: int):
+    def get_photo_url(self, aluno_id: str):
         return None
 
 class SupabaseStorage:
@@ -60,7 +60,7 @@ class SupabaseStorage:
         else:
             self.sb = None
             
-    def save_embedding(self, aluno_id: int, embedding: np.ndarray, model_version: str):
+    def save_embedding(self, aluno_id: str, embedding: np.ndarray, model_version: str):
         with self.conn.cursor() as cur:
             cur.execute("""
                 UPDATE alunos
@@ -78,7 +78,7 @@ class SupabaseStorage:
             rows = cur.fetchall()
             return {row[0]: row[1] for row in rows}
             
-    def save_photo(self, aluno_id: int, photo_bytes: bytes):
+    def save_photo(self, aluno_id: str, photo_bytes: bytes):
         if not self.sb: return
         file_path = f"{aluno_id}.jpg"
         # Deleta se existir para sobrescrever
@@ -88,7 +88,7 @@ class SupabaseStorage:
             pass
         self.sb.storage.from_("fotos-alunos").upload(file_path, photo_bytes, {"content-type": "image/jpeg"})
         
-    def get_photo_url(self, aluno_id: int):
+    def get_photo_url(self, aluno_id: str):
         if not self.sb: return None
         file_path = f"{aluno_id}.jpg"
         res = self.sb.storage.from_("fotos-alunos").create_signed_url(file_path, 300) # 5 minutos
@@ -120,7 +120,7 @@ def health():
     return {"status": "ok"}
 
 @app.post("/enroll")
-async def enroll(aluno_id: int = Form(...), file: UploadFile = File(...)):
+async def enroll(aluno_id: str = Form(...), file: UploadFile = File(...)):
     contents = await file.read()
     nparr = np.frombuffer(contents, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -176,7 +176,7 @@ async def identify(file: UploadFile = File(...), turma_id: str = Form(None)):
     return {"match": False, "score": float(best_sim)}
 
 @app.get("/foto-assinada/{aluno_id}")
-def get_foto(aluno_id: int):
+def get_foto(aluno_id: str):
     url = storage.get_photo_url(aluno_id)
     if url:
         return {"url": url}
