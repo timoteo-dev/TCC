@@ -63,18 +63,31 @@ class SupabaseStorage:
     def save_embedding(self, aluno_id: str, embedding: np.ndarray, model_version: str):
         with self.conn.cursor() as cur:
             cur.execute("""
-                UPDATE alunos
-                SET embedding = %s, model_version = %s
-                WHERE id = %s
-            """, (embedding, model_version, aluno_id))
+                INSERT INTO alunos_biometria_facial (aluno_id, embedding, model_version, updated_at)
+                VALUES (%s, %s, %s, now())
+                ON CONFLICT (aluno_id, model_version)
+                DO UPDATE SET embedding = EXCLUDED.embedding, updated_at = now()
+            """, (aluno_id, embedding, model_version))
         self.conn.commit()
         
     def get_all_embeddings(self, turma_id: str = None):
         with self.conn.cursor() as cur:
             if turma_id:
-                cur.execute("SELECT id, embedding FROM alunos WHERE embedding IS NOT NULL AND model_version = %s AND turma_id = %s", (MODEL_NAME, turma_id))
+                cur.execute("""
+                    SELECT b.aluno_id, b.embedding 
+                    FROM alunos_biometria_facial b
+                    JOIN alunos a ON a.id = b.aluno_id
+                    WHERE b.embedding IS NOT NULL 
+                      AND b.model_version = %s 
+                      AND a.turma_id = %s
+                """, (MODEL_NAME, turma_id))
             else:
-                cur.execute("SELECT id, embedding FROM alunos WHERE embedding IS NOT NULL AND model_version = %s", (MODEL_NAME,))
+                cur.execute("""
+                    SELECT aluno_id, embedding 
+                    FROM alunos_biometria_facial 
+                    WHERE embedding IS NOT NULL 
+                      AND model_version = %s
+                """, (MODEL_NAME,))
             rows = cur.fetchall()
             return {row[0]: row[1] for row in rows}
             

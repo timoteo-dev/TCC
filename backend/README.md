@@ -33,9 +33,18 @@ Este é o serviço FastAPI responsável pelo reconhecimento facial dos alunos, u
 
 5. Acesse `http://127.0.0.1:8000/docs` para ver a interface interativa (Swagger) e testar a API.
 
+## Banco de Dados e Biometria Facial
+
+Os dados biométricos (embeddings de 512 dimensões do ArcFace e descritores faciais) ficam isolados na tabela `alunos_biometria_facial`, vinculada à tabela `alunos` por chave estrangeira (`aluno_id`) com deleção em cascata e índice HNSW com pgvector.
+
+Para aplicar a estrutura no banco de dados Supabase:
+1. Abra o **SQL Editor** no painel do Supabase.
+2. Execute o arquivo [`supabase/migration_separar_biometria_facial.sql`](../supabase/migration_separar_biometria_facial.sql).
+
 ## Avisos para Produção
 
 - **Modelos InsightFace**: Os modelos `buffalo_l` possuem licença restrita para uso não-comercial. Se este sistema for comercializado, será necessário trocar os pesos do modelo ou adquirir uma licença comercial.
 - **LGPD**: Certifique-se de obter o termo de consentimento dos responsáveis para capturar, armazenar e processar a biometria facial dos alunos. O aplicativo possui a variável `p_consentimento = true` fixada no front; isso exige um documento real assinado.
 - **Segurança**: Nunca exponha a porta deste backend diretamente para a internet pública sem restrições ou autenticação. Use TLS/SSL no deploy, e limite o acesso CORS.
 - **Storage**: O Supabase precisa ter a chave Service Role configurada no backend para fazer uploads no bucket privado `fotos-alunos`.
+
