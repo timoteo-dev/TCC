@@ -292,12 +292,33 @@
           <span class="crumb-current">Gestão Facial</span>
         </nav>
 
-        <div class="coord-students-header" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-          <h2 class="coord-students-title">Registro Facial</h2>
-          <p class="coord-date" style="font-size: 15px;">Selecione o aluno e posicione-se em frente à câmera para registrar a biometria.</p>
+        <div class="coord-students-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap;">
+          <div>
+            <h2 class="coord-students-title">Registro Facial</h2>
+            <p class="coord-date" style="font-size: 15px;">Selecione o aluno e posicione-se em frente à câmera para registrar a biometria.</p>
+          </div>
+          <button class="btn-excecao" id="btn-facial-add-excecao" type="button" style="white-space: nowrap;">+ Exceção de Merenda</button>
         </div>
 
         <div style="background: #fff; padding: 24px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.03); max-width: 600px; margin-top: 24px;">
+          <!-- Stepper de Etapas -->
+          <div class="facial-stepper" id="facial-stepper">
+            <div class="fstep active" id="fstep-1">
+              <div class="fstep-num">1</div>
+              <span class="fstep-lbl">Selecionar aluno</span>
+            </div>
+            <div class="fstep-line" id="fstep-line-1"></div>
+            <div class="fstep" id="fstep-2">
+              <div class="fstep-num">2</div>
+              <span class="fstep-lbl">Confirmar identidade</span>
+            </div>
+            <div class="fstep-line" id="fstep-line-2"></div>
+            <div class="fstep" id="fstep-3">
+              <div class="fstep-num">3</div>
+              <span class="fstep-lbl">Pronto</span>
+            </div>
+          </div>
+
           <div class="field-group">
             <label class="field-lbl" for="facial-select-turma">1. SELECIONE A TURMA</label>
             <select class="field-inp" id="facial-select-turma" required style="cursor: pointer; background: #faf8f5;">
@@ -335,19 +356,6 @@
           </div>
         </div>
       </div>
-
-    </div>
-    <div class="passo-linha"></div>
-    <div class="passo" data-passo="identidade">
-      <span class="passo-num">2</span>
-      <span class="passo-rotulo">Confirmar identidade</span>
-    </div>
-    <div class="passo-linha"></div>
-    <div class="passo" data-passo="pronto">
-      <span class="passo-num">3</span>
-      <span class="passo-rotulo">Pronto</span>
-    </div>
-  </header>
 
     </div>
   </section>
@@ -497,7 +505,7 @@
           <div class="meal-options-chips">
             <label class="chip-option">
               <input type="radio" name="exc-meal-interno" value="recreio" checked />
-              <span class="chip-content">1º Recreio</span>
+              <span class="chip-content">Lanche</span>
             </label>
             <label class="chip-option">
               <input type="radio" name="exc-meal-interno" value="almoco" />

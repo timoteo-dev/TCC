@@ -1026,3 +1026,91 @@ body:has(#screen-coordenacao.active) .nav-tab[data-screen="coordenacao"].active:
   .excecao-modal-box { padding: 22px 18px; }
   .excecao-tabs-row { flex-direction: column; }
 }
+
+/* ── Stepper do Registro Facial ────────────────────────── */
+.facial-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+  gap: 8px;
+}
+
+.fstep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #8C7E72;
+  transition: all 0.3s ease;
+}
+
+.fstep-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #F4EBE1;
+  border: 2px solid #D8C7B0;
+  color: #765D4B;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.fstep-lbl {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: -0.2px;
+  transition: color 0.3s ease;
+}
+
+.fstep.active .fstep-num {
+  background: var(--green);
+  border-color: var(--green);
+  color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(23, 75, 55, 0.15);
+}
+
+.fstep.active .fstep-lbl {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.fstep.completed .fstep-num {
+  background: #2E7D32;
+  border-color: #2E7D32;
+  color: #ffffff;
+}
+
+.fstep.completed .fstep-lbl {
+  color: #2E7D32;
+}
+
+.fstep-line {
+  flex: 1;
+  height: 2px;
+  background: #E8DDD0;
+  min-width: 20px;
+  transition: background 0.3s ease;
+}
+
+.fstep-line.completed {
+  background: #2E7D32;
+}
+
+@media (max-width: 580px) {
+  .facial-stepper {
+    gap: 4px;
+  }
+  .fstep-lbl {
+    display: none;
+  }
+}
+

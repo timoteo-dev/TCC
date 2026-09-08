@@ -1148,10 +1148,11 @@ function fecharModalExcecao() {
   if (f2) f2.reset();
 }
 
-// Botão de abrir no painel da coordenação
-if ($("btn-add-excecao")) {
-  $("btn-add-excecao").addEventListener("click", abrirModalExcecao);
-}
+// Botões de abrir no painel da coordenação e no registro facial
+["btn-add-excecao", "btn-facial-add-excecao"].forEach(id => {
+  const btn = $(id);
+  if (btn) btn.addEventListener("click", abrirModalExcecao);
+});
 
 // Fechar modal
 ["btn-close-excecao", "btn-cancel-excecao-1", "btn-cancel-excecao-2"].forEach(id => {
@@ -1501,7 +1502,7 @@ function showIdentified(student) {
 
   $("ir-meals").innerHTML = `
     <span class="ir-tag ${student.recreio ? "sim" : "nao"}">
-      🥐 1º Recreio — ${student.recreio ? "pediu" : "não pediu"}
+      🥐 Lanche — ${student.recreio ? "pediu" : "não pediu"}
     </span>
     <span class="ir-tag ${student.almoco ? "sim" : "nao"}">
       🍽️ Almoço — ${student.almoco ? "pediu" : "não pediu"}
@@ -1754,6 +1755,33 @@ const fBtnRetake = $("btn-facial-retake");
 const fBtnSave = $("btn-facial-save");
 const fErrorMsg = $("facial-error-msg");
 
+function updateFacialStep(step) {
+  const step1 = $("fstep-1");
+  const step2 = $("fstep-2");
+  const step3 = $("fstep-3");
+  const line1 = $("fstep-line-1");
+  const line2 = $("fstep-line-2");
+  if (!step1 || !step2 || !step3) return;
+
+  [step1, step2, step3].forEach(s => s.classList.remove("active", "completed"));
+  if (line1) line1.classList.remove("completed");
+  if (line2) line2.classList.remove("completed");
+
+  if (step === 1) {
+    step1.classList.add("active");
+  } else if (step === 2) {
+    step1.classList.add("completed");
+    if (line1) line1.classList.add("completed");
+    step2.classList.add("active");
+  } else if (step === 3) {
+    step1.classList.add("completed");
+    step2.classList.add("completed");
+    if (line1) line1.classList.add("completed");
+    if (line2) line2.classList.add("completed");
+    step3.classList.add("active", "completed");
+  }
+}
+
 function openGestaoFacial() {
   if (viewClassesFacial) viewClassesFacial.classList.add("hidden");
   if ($("coord-view-students")) $("coord-view-students").classList.add("hidden");
@@ -1768,9 +1796,10 @@ function openGestaoFacial() {
   fSelectTurma.innerHTML = '<option value="" disabled selected>Selecione a turma...</option>';
   fSelectAluno.innerHTML = '<option value="" disabled selected>Selecione a turma primeiro...</option>';
   fSelectAluno.disabled = true;
+  updateFacialStep(1);
 
-  // Popula turmas
-  ALL_TURMAS.forEach(t => {
+  // Popula turmas escolares (sem a opção Exceções)
+  ALL_TURMAS.filter(t => t !== "Exceções").forEach(t => {
     const opt = document.createElement("option");
     opt.value = t;
     opt.textContent = t;
@@ -1825,6 +1854,7 @@ if (fSelectTurma) {
     fSelectAluno.disabled = false;
     stopFacialCamera();
     fCamSection.classList.add("hidden");
+    updateFacialStep(1);
 
     const alunosTurma = students.filter(s => s.turma === turma).sort((a,b) => a.name.localeCompare(b.name));
     alunosTurma.forEach(a => {
@@ -1840,7 +1870,10 @@ if (fSelectAluno) {
   fSelectAluno.addEventListener("change", () => {
     selectedFacialAlunoId = fSelectAluno.value;
     if (selectedFacialAlunoId) {
+      updateFacialStep(2);
       startFacialCamera();
+    } else {
+      updateFacialStep(1);
     }
   });
 }
@@ -1910,11 +1943,15 @@ if (fBtnSave) {
       }
       
       showToast("Biometria Facial registrada com sucesso!");
+      updateFacialStep(3);
       
-      // Reseta para o próximo
-      fSelectAluno.value = "";
-      stopFacialCamera();
-      fCamSection.classList.add("hidden");
+      // Reseta para o próximo após breve exibição do feedback
+      setTimeout(() => {
+        fSelectAluno.value = "";
+        stopFacialCamera();
+        fCamSection.classList.add("hidden");
+        updateFacialStep(1);
+      }, 1500);
       
     } catch(err) {
       console.error(err);
