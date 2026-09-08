@@ -67,6 +67,12 @@ button { cursor: pointer; }
   height: 3px; border-radius: 4px 4px 0 0; background: #fff4d9;
 }
 .nav-protected::after { content: none; }
+.nav-tab.nav-protected:not(.unlocked) {
+  opacity: 0.7;
+}
+.nav-tab.nav-protected:not(.unlocked):hover {
+  opacity: 1;
+}
 
 /* Cor e presença da navegação por tela */
 body:has(#screen-login.active) .nav { background: linear-gradient(101deg, #801d1c, #a12722); }

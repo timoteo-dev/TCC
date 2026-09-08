@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 import psycopg2
 from pgvector.psycopg2 import register_vector
@@ -30,25 +31,57 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+photos_dir = os.path.join(os.path.dirname(__file__), "fotos_salvas")
+os.makedirs(photos_dir, exist_ok=True)
+app.mount("/fotos-locais", StaticFiles(directory=photos_dir), name="fotos-locais")
+
 # Inicializa o InsightFace
 face_app = FaceAnalysis(name=MODEL_NAME)
 face_app.prepare(ctx_id=0, det_size=(640, 640))
 
 # --- Storage Layer ---
-class MemoryStorage:
-    def __init__(self):
+class LocalPersistentStorage:
+    def __init__(self, data_file="embeddings_cache.npz", photos_dir="fotos_salvas"):
+        self.data_file = os.path.join(os.path.dirname(__file__), data_file)
+        self.photos_dir = os.path.join(os.path.dirname(__file__), photos_dir)
+        os.makedirs(self.photos_dir, exist_ok=True)
         self.embeddings = {} # aluno_id: embedding
+        self._load()
         
+    def _load(self):
+        if os.path.exists(self.data_file):
+            try:
+                data = np.load(self.data_file, allow_pickle=True)
+                self.embeddings = {k: data[k] for k in data.files}
+                print(f"[Storage Local] {len(self.embeddings)} biometrias faciais carregadas do cache em disco.")
+            except Exception as e:
+                print(f"[Storage Local] Erro ao ler cache: {e}")
+
+    def _save(self):
+        try:
+            np.savez_compressed(self.data_file, **self.embeddings)
+        except Exception as e:
+            print(f"[Storage Local] Erro ao persistir cache: {e}")
+
     def save_embedding(self, aluno_id: str, embedding: np.ndarray, model_version: str):
-        self.embeddings[aluno_id] = embedding
+        self.embeddings[str(aluno_id)] = embedding
+        self._save()
         
     def get_all_embeddings(self, turma_id: str = None):
         return self.embeddings
         
     def save_photo(self, aluno_id: str, photo_bytes: bytes):
-        pass # Ignorado em memória
+        file_path = os.path.join(self.photos_dir, f"{aluno_id}.jpg")
+        try:
+            with open(file_path, "wb") as f:
+                f.write(photo_bytes)
+        except Exception as e:
+            print(f"[Storage Local] Erro ao salvar miniatura: {e}")
         
     def get_photo_url(self, aluno_id: str):
+        file_path = os.path.join(self.photos_dir, f"{aluno_id}.jpg")
+        if os.path.exists(file_path):
+            return f"/fotos-locais/{aluno_id}.jpg"
         return None
 
 class SupabaseStorage:
@@ -96,7 +129,7 @@ class SupabaseStorage:
             return res["signedURL"]
         return res
 
-storage = SupabaseStorage() if DATABASE_URL else MemoryStorage()
+storage = SupabaseStorage() if DATABASE_URL else LocalPersistentStorage()
 
 # --- Funções Auxiliares ---
 def get_largest_face(image: np.ndarray):
@@ -179,5 +212,7 @@ async def identify(file: UploadFile = File(...), turma_id: str = Form(None)):
 def get_foto(aluno_id: str):
     url = storage.get_photo_url(aluno_id)
     if url:
+        if url.startswith("/"):
+            return {"url": f"http://127.0.0.1:8000{url}"}
         return {"url": url}
     raise HTTPException(status_code=404, detail="Foto não encontrada ou Supabase não configurado")

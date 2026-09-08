@@ -8,7 +8,7 @@
 
 const SUPABASE_URL = "https://sifhqlbobxaofeypjnhd.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpZmhxbGJvYnhhb2ZleXBqbmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxMDYzNTIsImV4cCI6MjA5ODY4MjM1Mn0.tECc42Xbmya3s7rafycICTqMQAMIMTjhH3Te7bZRofI";
-const FACE_BACKEND_URL = "https://badland-twisty-unsold.ngrok-free.dev";
+const FACE_BACKEND_URL = "http://127.0.0.1:8000";
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -168,16 +168,20 @@ function goTo(name) {
   
   const isProtected = ["aluno", "coordenacao", "cozinha"].includes(name);
   if (isProtected) {
+    const modalSub = $("modal-auth")?.querySelector(".modal-sub");
     if (!isLoggedIn) {
+      if (modalSub) {
+        modalSub.textContent = "Você precisa fazer login para acessar esta área.";
+      }
       $("modal-backdrop").classList.remove("hidden");
       return;
     }
-    // Proteção rigorosa baseada no papel logado
-    if (name === "aluno" && loggedInRole !== "aluno") {
-      $("modal-backdrop").classList.remove("hidden");
-      return;
-    }
-    if ((name === "coordenacao" || name === "cozinha") && loggedInRole === "aluno") {
+    // Proteção rigorosa: cada perfil autenticado só pode acessar estritamente sua própria área
+    if (name !== loggedInRole) {
+      const roleLabels = { aluno: "Aluno", coordenacao: "Coordenação", cozinha: "Cozinha" };
+      if (modalSub) {
+        modalSub.textContent = `Seu perfil atual (${roleLabels[loggedInRole] || loggedInRole}) não tem permissão para acessar a área da ${roleLabels[name] || name}.`;
+      }
       $("modal-backdrop").classList.remove("hidden");
       return;
     }
@@ -1939,7 +1943,8 @@ if (fBtnSave) {
       });
       
       if (!res.ok) {
-        throw new Error("Falha no servidor: " + res.status);
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || ("Falha no servidor: " + res.status));
       }
       
       showToast("Biometria Facial registrada com sucesso!");

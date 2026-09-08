@@ -13,4 +13,11 @@ build/
 Thumbs.db
 .vscode/
 
+# Python
+__pycache__/
+*.pyc
+venv/
+backend/venv/
+backend/embeddings_cache.npz
+backend/fotos_salvas/
 .env
