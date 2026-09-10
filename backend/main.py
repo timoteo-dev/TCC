@@ -130,7 +130,27 @@ class SupabaseStorage:
             return res["signedURL"]
         return res
 
-storage = SupabaseStorage() if DATABASE_URL else LocalPersistentStorage()
+try:
+    if DATABASE_URL:
+        storage = SupabaseStorage()
+        print("[Storage] Conectado ao PostgreSQL/Supabase com sucesso.")
+    else:
+        storage = LocalPersistentStorage()
+        print("[Storage] DATABASE_URL não definida. Usando LocalPersistentStorage.")
+except Exception as e:
+    print(f"[Storage] AVISO: Falha ao conectar ao banco de dados Supabase ({e}).")
+    print("[Storage] Ativando fallback para LocalPersistentStorage para manter a API online.")
+    storage = LocalPersistentStorage()
+
+@app.get("/")
+def read_root():
+    is_sb = isinstance(storage, SupabaseStorage)
+    return {
+        "status": "online",
+        "service": "API Reconhecimento Facial Merenda",
+        "storage": "Supabase (PostgreSQL)" if is_sb else "Local (Cache)"
+    }
+
 
 # --- Funções Auxiliares ---
 def get_largest_face(image: np.ndarray):
