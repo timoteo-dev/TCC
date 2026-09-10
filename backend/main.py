@@ -16,9 +16,18 @@ from scipy.spatial.distance import cosine
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.strip()
+
 SUPABASE_URL = os.getenv("SUPABASE_URL")
+if SUPABASE_URL:
+    SUPABASE_URL = SUPABASE_URL.strip()
+
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-THRESHOLD = float(os.getenv("FACE_MATCH_THRESHOLD", "0.36"))
+if SUPABASE_KEY:
+    SUPABASE_KEY = SUPABASE_KEY.strip()
+
+THRESHOLD = float(os.getenv("FACE_MATCH_THRESHOLD", "0.36").strip())
 MODEL_NAME = 'buffalo_s'
 
 app = FastAPI(title="Reconhecimento Facial API")
