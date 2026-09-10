@@ -2,7 +2,7 @@ import os
 import io
 import cv2
 import numpy as np
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
@@ -239,10 +239,11 @@ async def identify(file: UploadFile = File(...), turma_id: str = Form(None)):
     return {"match": False, "score": float(best_sim)}
 
 @app.get("/foto-assinada/{aluno_id}")
-def get_foto(aluno_id: str):
+def get_foto(aluno_id: str, request: Request):
     url = storage.get_photo_url(aluno_id)
     if url:
         if url.startswith("/"):
-            return {"url": f"http://127.0.0.1:8000{url}"}
+            base_url = str(request.base_url).rstrip("/")
+            return {"url": f"{base_url}{url}"}
         return {"url": url}
     raise HTTPException(status_code=404, detail="Foto não encontrada ou Supabase não configurado")
