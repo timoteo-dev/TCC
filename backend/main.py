@@ -35,8 +35,9 @@ photos_dir = os.path.join(os.path.dirname(__file__), "fotos_salvas")
 os.makedirs(photos_dir, exist_ok=True)
 app.mount("/fotos-locais", StaticFiles(directory=photos_dir), name="fotos-locais")
 
-# Inicializa o InsightFace apenas com detecção e reconhecimento (economiza ~85% de RAM para caber nos 512MB do Render)
-face_app = FaceAnalysis(name=MODEL_NAME, allowed_modules=['detection', 'recognition'])
+# Inicializa o InsightFace com os modelos leves locais (economiza ~85% de RAM e NÃO baixa zip de 125MB no Render)
+models_root = os.path.join(os.path.dirname(__file__), "insightface_models")
+face_app = FaceAnalysis(name=MODEL_NAME, root=models_root, allowed_modules=['detection', 'recognition'])
 face_app.prepare(ctx_id=-1, det_size=(640, 640))
 
 # --- Storage Layer ---
