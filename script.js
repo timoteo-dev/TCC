@@ -1598,16 +1598,19 @@ if ($("btn-gerar-senha-aluno")) {
 if ($("btn-cad-ligar-cam")) {
   $("btn-cad-ligar-cam").addEventListener("click", async () => {
     try {
-      cadCamStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: "user" } });
+      cadCamStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" }
+      });
       const vid = $("cad-aluno-video");
       vid.srcObject = cadCamStream;
       vid.style.display = "block";
+      try { await vid.play(); } catch(e) {}
       $("btn-cad-ligar-cam").style.display = "none";
       $("btn-cad-tirar-foto").style.display = "block";
       $("cad-aluno-cam-status").textContent = "Posicione o rosto e clique em Tirar Foto";
     } catch(err) {
       console.error(err);
-      $("cad-aluno-cam-status").textContent = "Erro ao acessar câmera.";
+      $("cad-aluno-cam-status").textContent = "Erro ao acessar câmera: " + (err.message || err.name);
     }
   });
 }
@@ -1828,15 +1831,22 @@ function startFacialCamera() {
   fErrorMsg.classList.add("hidden");
   facialBlob = null;
 
-  navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 320, facingMode: "user" } })
-    .then(stream => {
+  navigator.mediaDevices.getUserMedia({
+    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" }
+  })
+    .then(async stream => {
       facialCamStream = stream;
       fVideo.srcObject = stream;
+      try {
+        await fVideo.play();
+      } catch (e) {
+        console.warn("Video play error:", e);
+      }
       fStatus.textContent = "Câmera pronta! Centralize o rosto e capture.";
     })
     .catch(err => {
       console.error(err);
-      fStatus.textContent = "Erro: Acesso à câmera bloqueado ou indisponível. (Utilize HTTPS ou localhost)";
+      fStatus.textContent = "Erro ao acessar câmera: " + (err.message || err.name);
     });
 }
 
@@ -1898,11 +1908,13 @@ if (fBtnCapture) {
     fCanvas.style.display = "block";
     fBtnCapture.classList.add("hidden");
     fBtnRetake.classList.remove("hidden");
-    fBtnSave.disabled = false;
-    fStatus.textContent = "Foto capturada! Salve para registrar na base.";
+    fBtnSave.disabled = true;
+    fStatus.textContent = "Processando foto...";
     
     fCanvas.toBlob(blob => {
       facialBlob = blob;
+      fBtnSave.disabled = false;
+      fStatus.textContent = "Foto capturada! Salve para registrar na base.";
     }, "image/jpeg", 0.9);
   });
 }
@@ -1921,7 +1933,16 @@ if (fBtnRetake) {
 
 if (fBtnSave) {
   fBtnSave.addEventListener("click", async () => {
-    if (!facialBlob || !selectedFacialAlunoId) return;
+    if (!facialBlob) {
+      fErrorMsg.textContent = "Capture uma foto com a câmera antes de salvar.";
+      fErrorMsg.classList.remove("hidden");
+      return;
+    }
+    if (!selectedFacialAlunoId) {
+      fErrorMsg.textContent = "Selecione o aluno antes de salvar.";
+      fErrorMsg.classList.remove("hidden");
+      return;
+    }
     
     const txt = fBtnSave.querySelector(".btn-txt");
     const loader = fBtnSave.querySelector(".btn-loader");
