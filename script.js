@@ -1894,15 +1894,24 @@ if (fSelectAluno) {
 
 if (fBtnCapture) {
   fBtnCapture.addEventListener("click", () => {
-    if (!facialCamStream) return;
+    if (!facialCamStream || !fVideo) return;
     
-    fCanvas.width = fVideo.videoWidth || 320;
-    fCanvas.height = fVideo.videoHeight || 320;
+    const vw = fVideo.videoWidth || 640;
+    const vh = fVideo.videoHeight || 480;
+    
+    // Calcula o corte quadrado central exato (o que o usuário vê na caixa 1:1)
+    const size = Math.min(vw, vh);
+    const sx = Math.floor((vw - size) / 2);
+    const sy = Math.floor((vh - size) / 2);
+    
+    fCanvas.width = size;
+    fCanvas.height = size;
     const ctx = fCanvas.getContext("2d");
     
-    ctx.translate(fCanvas.width, 0);
+    // Espelha horizontalmente para coincidir com a visualização espelhada da câmera selfie
+    ctx.translate(size, 0);
     ctx.scale(-1, 1);
-    ctx.drawImage(fVideo, 0, 0, fCanvas.width, fCanvas.height);
+    ctx.drawImage(fVideo, sx, sy, size, size, 0, 0, size, size);
     
     fVideo.style.display = "none";
     fCanvas.style.display = "block";
@@ -1915,7 +1924,7 @@ if (fBtnCapture) {
       facialBlob = blob;
       fBtnSave.disabled = false;
       fStatus.textContent = "Foto capturada! Salve para registrar na base.";
-    }, "image/jpeg", 0.9);
+    }, "image/jpeg", 0.92);
   });
 }
 
