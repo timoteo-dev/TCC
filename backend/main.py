@@ -48,7 +48,7 @@ app.mount("/fotos-locais", StaticFiles(directory=photos_dir), name="fotos-locais
 # Inicializa o InsightFace com os modelos leves locais (economiza ~85% de RAM e NÃO baixa zip de 125MB no Render)
 models_root = os.path.join(os.path.dirname(__file__), "insightface_models")
 face_app = FaceAnalysis(name=MODEL_NAME, root=models_root, allowed_modules=['detection', 'recognition'])
-face_app.prepare(ctx_id=-1, det_size=(640, 640))
+face_app.prepare(ctx_id=-1, det_size=(640, 640), det_thresh=0.50)
 
 # --- Storage Layer ---
 class LocalPersistentStorage:
@@ -94,6 +94,17 @@ class LocalPersistentStorage:
         if os.path.exists(file_path):
             return f"/fotos-locais/{aluno_id}.jpg"
         return None
+
+    def delete_aluno(self, aluno_id: str):
+        if str(aluno_id) in self.embeddings:
+            del self.embeddings[str(aluno_id)]
+            self._save()
+        file_path = os.path.join(self.photos_dir, f"{aluno_id}.jpg")
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                print(f"[Storage Local] Erro ao remover foto: {e}")
 
 class SupabaseStorage:
     def __init__(self):
@@ -183,6 +194,22 @@ class SupabaseStorage:
             return res["signedURL"]
         return res
 
+    def delete_aluno(self, aluno_id: str):
+        conn = self.get_conn()
+        with conn.cursor() as cur:
+            try:
+                cur.execute("DELETE FROM pedidos WHERE aluno_id = %s", (aluno_id,))
+            except Exception as e:
+                print(f"[Supabase Storage] Aviso ao remover pedidos: {e}")
+            cur.execute("DELETE FROM alunos WHERE id = %s", (aluno_id,))
+        conn.commit()
+
+        if self.sb:
+            try:
+                self.sb.storage.from_("fotos-alunos").remove([f"{aluno_id}.jpg"])
+            except Exception as e:
+                print(f"[Supabase Storage] Aviso ao remover foto: {e}")
+
 try:
     if DATABASE_URL:
         storage = SupabaseStorage()
@@ -206,12 +233,43 @@ def read_root():
 
 
 # --- Funções Auxiliares ---
-def get_largest_face(image: np.ndarray):
+def is_valid_human_face(face, min_det_score: float = 0.65, min_face_size: int = 35) -> bool:
+    # 1. Confiança da detecção
+    score = getattr(face, "det_score", 0.0)
+    if score < min_det_score:
+        return False
+        
+    # 2. Dimensões mínimas da caixa do rosto (evita objetos pequenos ao fundo)
+    w = face.bbox[2] - face.bbox[0]
+    h = face.bbox[3] - face.bbox[1]
+    if w < min_face_size or h < min_face_size:
+        return False
+        
+    # 3. Geometria anatômica dos 5 marcos (olhos acima do nariz, boca abaixo do nariz)
+    if hasattr(face, "kps") and face.kps is not None and len(face.kps) == 5:
+        left_eye, right_eye, nose, left_mouth, right_mouth = face.kps
+        # Olhos devem estar acima do nariz
+        if left_eye[1] >= nose[1] or right_eye[1] >= nose[1]:
+            return False
+        # Boca deve estar abaixo do nariz
+        if left_mouth[1] <= nose[1] or right_mouth[1] <= nose[1]:
+            return False
+        # Distância entre os olhos proporcional à largura do rosto
+        eye_dist = np.linalg.norm(right_eye - left_eye)
+        if eye_dist < (w * 0.18):
+            return False
+
+    return True
+
+def get_largest_face(image: np.ndarray, min_det_score: float = 0.65, min_face_size: int = 35):
     faces = face_app.get(image)
     if not faces:
         return None
-    # Maior rosto por área da bbox
-    return max(faces, key=lambda f: (f.bbox[2]-f.bbox[0]) * (f.bbox[3]-f.bbox[1]))
+    valid_faces = [f for f in faces if is_valid_human_face(f, min_det_score, min_face_size)]
+    if not valid_faces:
+        return None
+    # Maior rosto válido por área da bbox
+    return max(valid_faces, key=lambda f: (f.bbox[2]-f.bbox[0]) * (f.bbox[3]-f.bbox[1]))
 
 def compress_image(image: np.ndarray) -> bytes:
     h, w = image.shape[:2]
@@ -234,9 +292,12 @@ async def enroll(aluno_id: str = Form(...), file: UploadFile = File(...)):
     if img is None:
         raise HTTPException(status_code=400, detail="Imagem inválida")
         
-    face = get_largest_face(img)
+    face = get_largest_face(img, min_det_score=0.65, min_face_size=35)
     if face is None:
-        raise HTTPException(status_code=400, detail="Nenhum rosto encontrado na foto")
+        raise HTTPException(
+            status_code=400,
+            detail="Nenhum rosto humano nítido identificado. Certifique-se de ser uma pessoa real olhando para a câmera."
+        )
         
     embedding = face.embedding
     storage.save_embedding(aluno_id, embedding, MODEL_NAME)
@@ -256,7 +317,7 @@ async def identify(file: UploadFile = File(...), turma_id: str = Form(None)):
         if img is None:
             raise HTTPException(status_code=400, detail="Imagem inválida")
             
-        face = get_largest_face(img)
+        face = get_largest_face(img, min_det_score=0.55, min_face_size=35)
         if face is None:
             return {"match": False, "face_detected": False, "reason": "no_face"}
             
@@ -321,3 +382,12 @@ def get_foto(aluno_id: str, request: Request):
             return {"url": f"{base_url}{url}"}
         return {"url": url}
     raise HTTPException(status_code=404, detail="Foto não encontrada ou Supabase não configurado")
+
+@app.delete("/aluno/{aluno_id}")
+def delete_aluno(aluno_id: str):
+    try:
+        storage.delete_aluno(aluno_id)
+        return {"status": "success", "deleted_id": aluno_id}
+    except Exception as e:
+        print(f"[Delete Aluno Error] {e}")
+        raise HTTPException(status_code=500, detail=str(e))

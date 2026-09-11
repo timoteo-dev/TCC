@@ -530,6 +530,31 @@ body:has(#screen-coordenacao.active) .nav-tab[data-screen="coordenacao"].active:
   color: #5C4E43;
 }
 
+/* Botão Excluir Aluno */
+.stitch-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid #F1C5C5;
+  border-radius: 50%;
+  background: #FFF5F5;
+  color: #C92A2A;
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.15s ease;
+}
+.stitch-delete-btn:hover {
+  background: #FFE3E3;
+  border-color: #FFA8A8;
+  transform: scale(1.08);
+}
+.stitch-delete-btn:active {
+  transform: scale(0.95);
+}
+
 /* Botão Senha */
 .btn-reset-pin {
   padding: 6px 16px;

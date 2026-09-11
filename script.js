@@ -748,6 +748,9 @@ function renderCoord() {
               <button class="stitch-meal-btn ${a.almoco ? "active" : "inactive"}" data-action="almoco" data-id="${a.id}">
                 🍽️ Almoço
               </button>
+              <button class="stitch-delete-btn" data-id="${a.id}" data-name="${a.name}" title="Excluir cadastro do aluno">
+                🗑️
+              </button>
             </div>
           `;
           list.appendChild(row);
@@ -774,9 +777,9 @@ function renderCoord() {
         // Event listeners para os botões de refeição da linha
         list.querySelectorAll(".stitch-meal-btn").forEach(btn => {
           btn.addEventListener("click", () => {
-            const id = parseInt(btn.dataset.id);
+            const id = btn.dataset.id;
             const meal = btn.dataset.action;
-            const s = students.find(s => s.id === id);
+            const s = students.find(s => String(s.id) === String(id));
             if (s) {
               s[meal] = !s[meal];
               showToast(`${s.name}: ${meal === "recreio" ? "Recreio" : "Almoço"} ${s[meal] ? "confirmado" : "desmarcado"}!`);
@@ -786,14 +789,52 @@ function renderCoord() {
           });
         });
 
+        // Event listeners para o botão de exclusão de aluno
+        list.querySelectorAll(".stitch-delete-btn").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const id = btn.dataset.id;
+            const s = students.find(s => String(s.id) === String(id));
+            const nome = s ? s.name : (btn.dataset.name || "o aluno");
+            
+            if (!confirm(`Deseja realmente excluir o cadastro de "${nome}"?\n\nEsta ação apagará todos os dados, histórico de refeições e biometria facial.`)) {
+              return;
+            }
 
-        // Event listener removido da VISÃO 2. Senhas agora resetadas na VISÃO 3.
+            try {
+              showToast(`Excluindo ${nome}...`);
+              
+              // 1. Apaga no backend (limpa biometria facial, fotos e registro no banco)
+              try {
+                await fetch(`${FACE_BACKEND_URL}/aluno/${id}`, { method: "DELETE" });
+              } catch(e) {
+                console.warn("Backend delete notice:", e);
+              }
+
+              // 2. Apaga no Supabase (pedidos e alunos)
+              try {
+                await db.from("pedidos").delete().eq("aluno_id", id);
+                await db.from("alunos").delete().eq("id", id);
+              } catch(e) {
+                console.warn("Supabase delete notice:", e);
+              }
+
+              // 3. Atualiza estado local e re-renderiza
+              students = students.filter(s => String(s.id) !== String(id));
+              showToast(`Cadastro de ${nome} excluído com sucesso!`);
+              renderCoord();
+              syncCozinha();
+            } catch(err) {
+              console.error("Erro ao excluir:", err);
+              showToast(`Erro ao excluir aluno: ${err.message || err}`);
+            }
+          });
+        });
 
         // Event listener para o botão Confirmar
         list.querySelectorAll("[data-action='confirmar']").forEach(btn => {
           btn.addEventListener("click", () => {
-            const id = parseInt(btn.dataset.id);
-            const s = students.find(s => s.id === id);
+            const id = btn.dataset.id;
+            const s = students.find(s => String(s.id) === String(id));
             if (s) {
               showToast(`Presença e refeições confirmadas para ${s.name}! ✅`);
             }
@@ -1835,6 +1876,7 @@ if ($("form-cadastro-aluno")) {
       return;
     }
 
+    let biometriaMsg = "";
     if (cadPhotoBlob) {
       try {
         const { data: novoAluno } = await db.from("alunos").select("id").eq("matricula", matricula).single();
@@ -1843,10 +1885,14 @@ if ($("form-cadastro-aluno")) {
           formData.append("aluno_id", novoAluno.id);
           formData.append("file", cadPhotoBlob, "foto.jpg");
           
-          fetch(`${FACE_BACKEND_URL}/enroll`, {
+          const enrollRes = await fetch(`${FACE_BACKEND_URL}/enroll`, {
             method: "POST",
             body: formData
-          }).catch(e => console.error("Enroll network error:", e));
+          });
+          if (!enrollRes.ok) {
+            const errData = await enrollRes.json().catch(() => ({}));
+            biometriaMsg = errData.detail || "Rosto humano não reconhecido na foto.";
+          }
         }
       } catch(err) {
         console.error("Erro ao fazer enroll da face:", err);
@@ -1854,14 +1900,13 @@ if ($("form-cadastro-aluno")) {
     }
 
     fecharModalCadastroAluno();
+    await carregarAlunos();
+    renderCoord();
     
-    const toast = $("toast");
-    if (toast) {
-      toast.textContent = `Aluno(a) ${nome} cadastrado(a) com sucesso!`;
-      toast.classList.remove("hidden");
-      setTimeout(() => toast.classList.add("hidden"), 3000);
+    if (biometriaMsg) {
+      alert(`Aluno(a) ${nome} cadastrado(a)!\n\nAviso sobre a Biometria Facial:\n${biometriaMsg}\n\nVocê poderá capturar a biometria facial posteriormente na aba "Gestão Facial".`);
     } else {
-      alert(`Aluno(a) ${nome} cadastrado(a) com sucesso!`);
+      showToast(`Aluno(a) ${nome} cadastrado(a) com sucesso!`);
     }
   });
 }
