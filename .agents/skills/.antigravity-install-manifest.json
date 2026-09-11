@@ -6,6 +6,7 @@
     "higgsfield-generate",
     "supabase",
     "supabase-postgres-best-practices",
-    "ui-ux-pro-max"
+    "ui-ux-pro-max",
+    "karpathy-guidelines"
   ]
 }
