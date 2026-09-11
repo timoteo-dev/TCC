@@ -145,13 +145,20 @@ class SupabaseStorage:
                 a_id, emb = row[0], row[1]
                 if emb is None:
                     continue
-                if isinstance(emb, str):
+                if hasattr(emb, "to_numpy"):
+                    emb = emb.to_numpy()
+                elif isinstance(emb, np.ndarray):
+                    pass
+                elif isinstance(emb, str):
                     try:
                         emb = np.array(json.loads(emb), dtype=np.float32)
                     except Exception:
                         emb = np.fromstring(emb.strip("[]"), sep=",", dtype=np.float32)
-                elif not isinstance(emb, np.ndarray):
-                    emb = np.array(emb, dtype=np.float32)
+                else:
+                    try:
+                        emb = np.array(emb, dtype=np.float32)
+                    except Exception:
+                        continue
                 result[a_id] = emb
             return result
             
