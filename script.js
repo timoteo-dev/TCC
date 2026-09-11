@@ -152,11 +152,56 @@ function showToast(msg) {
   clearTimeout(toastTimer);
   el.textContent = msg;
   el.classList.remove("hidden");
-  toastTimer = setTimeout(() => el.classList.add("hidden"), 2800);
+  toastTimer = setTimeout(() => el.classList.add("hidden"), 3000);
 }
 
 function formatDate() {
   return new Date().toLocaleDateString("pt-BR", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
+}
+
+/* ── HORÁRIO DE BRASÍLIA E REGRAS DE MERENDA ─────────────── */
+function getHorarioBrasilia() {
+  try {
+    const parts = new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: false
+    }).formatToParts(new Date());
+    const hour = parseInt(parts.find(p => p.type === "hour").value, 10);
+    const minute = parseInt(parts.find(p => p.type === "minute").value, 10);
+    return { hour, minute };
+  } catch (e) {
+    const now = new Date();
+    const utcNow = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const bsb = new Date(utcNow + (3600000 * -3));
+    return { hour: bsb.getHours(), minute: bsb.getMinutes() };
+  }
+}
+
+function podeMarcarMerendaHoje() {
+  const { hour, minute } = getHorarioBrasilia();
+  return hour < 7 || (hour === 7 && minute <= 50);
+}
+
+function atualizarPrazoBar() {
+  const el = document.querySelector(".pb-remaining");
+  if (!el) return;
+  const { hour, minute } = getHorarioBrasilia();
+  if (!podeMarcarMerendaHoje()) {
+    el.textContent = "Encerrado hoje (07:50)";
+  } else {
+    const totalNow = hour * 60 + minute;
+    const limit = 7 * 60 + 50; // 470 mins
+    const diff = limit - totalNow;
+    if (diff > 60) {
+      const h = Math.floor(diff / 60);
+      const m = diff % 60;
+      el.textContent = `Restam ${h}h ${m}min`;
+    } else {
+      el.textContent = `Restam ${diff} min`;
+    }
+  }
 }
 
 /* ── NAVEGAÇÃO E CONTROLO DE ACESSO ──────────────────────── */
@@ -198,7 +243,9 @@ function goTo(name) {
   if (sc) sc.classList.add("active");
   if (bt) bt.classList.add("active");
 
-  if (name === "coordenacao") {
+  if (name === "aluno") {
+    atualizarPrazoBar();
+  } else if (name === "coordenacao") {
     carregarAlunos().then(() => renderCoord());
   } else if (name === "cozinha") {
     carregarAlunos().then(() => renderCozinha());
@@ -323,23 +370,11 @@ $("btn-login").addEventListener("click", async () => {
     });
 
     const aluno = data[0];
-    currentAlunoId = aluno.id;
-    $("aluno-nome-display").textContent = aluno.nome;
-    const nameParts = aluno.nome.split(" ");
-    let initials = nameParts[0][0];
-    if (nameParts.length > 1) initials += nameParts[nameParts.length - 1][0];
-    $("aluno-avatar-display").textContent = initials.toUpperCase();
-
     const selectTurma = $("input-turma");
     if (selectTurma && selectTurma.selectedIndex >= 0) {
-      const turmaName = selectTurma.options[selectTurma.selectedIndex].text;
-      if ($("aluno-turma-display")) {
-        $("aluno-turma-display").textContent = `Turma — ${turmaName}`;
-      }
+      aluno.turma = selectTurma.options[selectTurma.selectedIndex].text;
     }
-
-    showToast(`Bem-vindo(a), ${aluno.nome}!`);
-    goTo("aluno");
+    fazerLoginAlunoAutomatico(aluno);
     return;
   }
 
@@ -402,6 +437,70 @@ $("btn-login").addEventListener("click", async () => {
   goTo(loggedInRole);
 });
 
+/* ── LOGIN AUTOMÁTICO DO ALUNO ───────────────────────────── */
+function fazerLoginAlunoAutomatico(aluno) {
+  if (!aluno) return;
+
+  isLoggedIn = true;
+  loggedInRole = "aluno";
+  activeRole = "aluno";
+
+  $$(".nav-protected").forEach(tab => {
+    if (tab.dataset.screen === loggedInRole) tab.classList.add("unlocked");
+    else tab.classList.remove("unlocked");
+  });
+
+  currentAlunoId = aluno.id;
+  const nome = aluno.nome || aluno.name || "Aluno";
+  $("aluno-nome-display").textContent = nome;
+
+  let initials = aluno.initials;
+  if (!initials) {
+    const parts = nome.trim().split(" ");
+    initials = parts[0] ? parts[0][0] : "";
+    if (parts.length > 1) initials += parts[parts.length - 1][0];
+    initials = initials.toUpperCase();
+  }
+  $("aluno-avatar-display").textContent = initials;
+
+  const turmaNome = aluno.turma || (aluno.turmas ? aluno.turmas.nome : "");
+  if ($("aluno-turma-display")) {
+    $("aluno-turma-display").textContent = turmaNome ? `Turma — ${turmaNome}` : "Turma — Ensino Médio";
+  }
+
+  // Verifica se o aluno já marcou merenda hoje
+  const s = students.find(x => x.id === aluno.id) || aluno;
+  const jaMarcou = Boolean(s.recreio || s.almoco);
+  const dentroDoHorario = podeMarcarMerendaHoje();
+
+  if (jaMarcou) {
+    $("aluno-order-section").classList.add("hidden");
+    $("aluno-confirmed").classList.remove("hidden");
+    const tags = $("confirmed-tags");
+    if (tags) {
+      tags.innerHTML = "";
+      if (s.recreio) tags.innerHTML += `<span class="cb-tag">Lanche</span>`;
+      if (s.almoco)  tags.innerHTML += `<span class="cb-tag">Almoço</span>`;
+    }
+    showToast(`Bem-vindo(a), ${nome}! Sua merenda de hoje já está confirmada.`);
+  } else {
+    selectedMeals.recreio = false;
+    selectedMeals.almoco = false;
+    $("aluno-confirmed").classList.add("hidden");
+    $("aluno-order-section").classList.remove("hidden");
+    updateMealUI();
+
+    if (dentroDoHorario) {
+      showToast(`Bem-vindo(a), ${nome}! Você pode marcar sua merenda até às 07:50.`);
+    } else {
+      showToast(`Olá, ${nome}! O horário limite de pedidos (07:50 de Brasília) já encerrou.`);
+    }
+  }
+
+  if (facialActive) stopCamera();
+  goTo("aluno");
+}
+
 /* ── TELA ALUNO ──────────────────────────────────────────── */
 const selectedMeals = { recreio: false, almoco: false };
 
@@ -426,6 +525,11 @@ function updateMealUI() {
 
   // Atualiza o botão de confirmação
   const btnConfirm = $("btn-confirm-order");
+  if (!podeMarcarMerendaHoje()) {
+    btnConfirm.disabled = true;
+    btnConfirm.textContent = "Horário de pedidos encerrado (07:50)";
+    return;
+  }
   const any = selectedMeals.recreio || selectedMeals.almoco;
   btnConfirm.disabled = !any;
   btnConfirm.textContent = any ? "Confirmar Pedido" : "Selecione ao menos uma refeição";
@@ -434,6 +538,10 @@ function updateMealUI() {
 // Clicks nos cards individuais
 ["recreio", "almoco"].forEach(meal => {
   $("meal-" + meal).addEventListener("click", () => {
+    if (!podeMarcarMerendaHoje()) {
+      showToast("O horário limite para pedidos (07:50) já encerrou hoje.");
+      return;
+    }
     selectedMeals[meal] = !selectedMeals[meal];
     updateMealUI();
   });
@@ -441,6 +549,10 @@ function updateMealUI() {
 
 // Click no botão de Ambas as refeições
 $("btn-ambas").addEventListener("click", () => {
+  if (!podeMarcarMerendaHoje()) {
+    showToast("O horário limite para pedidos (07:50) já encerrou hoje.");
+    return;
+  }
   const turnOn = !(selectedMeals.recreio && selectedMeals.almoco);
   selectedMeals.recreio = turnOn;
   selectedMeals.almoco = turnOn;
@@ -448,11 +560,7 @@ $("btn-ambas").addEventListener("click", () => {
 });
 
 $("btn-confirm-order").addEventListener("click", () => {
-  const now = new Date();
-  const utcNow = now.getTime() + (now.getTimezoneOffset() * 60000);
-  const bsbTime = new Date(utcNow + (3600000 * -3)); 
-  
-  if (bsbTime.getHours() > 7 || (bsbTime.getHours() === 7 && bsbTime.getMinutes() > 50)) {
+  if (!podeMarcarMerendaHoje()) {
     const toast = $("toast");
     if (toast) {
       toast.textContent = "O horário limite (07:50) já foi encerrado.";
@@ -1475,19 +1583,26 @@ async function identificarRostoNoBackend() {
       const scorePct = data.score ? Math.round(data.score * 100) : 100;
       if (s) {
         showIdentified(s);
-        setStatus("green", `Identificado: ${s.name} (${scorePct}%)`);
+        setStatus("green", `Identificado: ${s.name} (${scorePct}%)! Entrando...`);
+        setTimeout(() => {
+          fazerLoginAlunoAutomatico(s);
+        }, 700);
       } else {
         const { data: dbAluno } = await db.from("alunos").select("id, nome, turma_id, turmas(nome)").eq("id", data.aluno_id).single();
         if (dbAluno) {
-          showIdentified({
+          const studentObj = {
             id: dbAluno.id,
             name: dbAluno.nome,
             turma: dbAluno.turmas ? dbAluno.turmas.nome : "",
             initials: dbAluno.nome[0],
             recreio: false,
             almoco: false
-          });
-          setStatus("green", `Identificado: ${dbAluno.nome} (${scorePct}%)`);
+          };
+          showIdentified(studentObj);
+          setStatus("green", `Identificado: ${dbAluno.nome} (${scorePct}%)! Entrando...`);
+          setTimeout(() => {
+            fazerLoginAlunoAutomatico(studentObj);
+          }, 700);
         } else {
           scanDone = false;
           setStatus("red", "Aluno não encontrado na base");
