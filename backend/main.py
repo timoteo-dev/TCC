@@ -133,45 +133,61 @@ class SupabaseStorage:
                 self._connect()
         return self.conn
             
+    def _execute(self, op_fn):
+        for attempt in range(2):
+            try:
+                conn = self.get_conn()
+                return op_fn(conn)
+            except (psycopg2.OperationalError, psycopg2.InterfaceError) as e:
+                print(f"[Supabase Storage] Reconectando após erro de rede (tentativa {attempt+1}): {e}")
+                self.conn = None
+                if attempt == 1:
+                    raise
+
     def save_embedding(self, aluno_id: str, embedding: np.ndarray, model_version: str):
-        conn = self.get_conn()
-        with conn.cursor() as cur:
-            cur.execute("""
-                UPDATE alunos
-                SET embedding = %s, model_version = %s
-                WHERE id = %s
-            """, (embedding, model_version, aluno_id))
-        conn.commit()
+        def _op(conn):
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE alunos
+                    SET embedding = %s, model_version = %s
+                    WHERE id = %s
+                """, (embedding, model_version, aluno_id))
+            conn.commit()
+        return self._execute(_op)
         
     def get_all_embeddings(self, turma_id: str = None):
-        conn = self.get_conn()
-        with conn.cursor() as cur:
-            if turma_id and turma_id != "todas":
-                cur.execute("SELECT id, embedding FROM alunos WHERE embedding IS NOT NULL AND model_version = %s AND turma_id = %s", (MODEL_NAME, turma_id))
-            else:
-                cur.execute("SELECT id, embedding FROM alunos WHERE embedding IS NOT NULL AND model_version = %s", (MODEL_NAME,))
-            rows = cur.fetchall()
-            result = {}
-            for row in rows:
-                a_id, emb = row[0], row[1]
-                if emb is None:
-                    continue
-                if hasattr(emb, "to_numpy"):
-                    emb = emb.to_numpy()
-                elif isinstance(emb, np.ndarray):
-                    pass
-                elif isinstance(emb, str):
-                    try:
-                        emb = np.array(json.loads(emb), dtype=np.float32)
-                    except Exception:
-                        emb = np.fromstring(emb.strip("[]"), sep=",", dtype=np.float32)
+        def _op(conn):
+            with conn.cursor() as cur:
+                if turma_id and turma_id not in ("todas", "undefined", "null", ""):
+                    cur.execute("SELECT id, embedding FROM alunos WHERE embedding IS NOT NULL AND (model_version = %s OR model_version IS NULL) AND turma_id = %s", (MODEL_NAME, turma_id))
                 else:
-                    try:
-                        emb = np.array(emb, dtype=np.float32)
-                    except Exception:
-                        continue
-                result[a_id] = emb
-            return result
+                    cur.execute("SELECT id, embedding FROM alunos WHERE embedding IS NOT NULL AND (model_version = %s OR model_version IS NULL)", (MODEL_NAME,))
+                return cur.fetchall()
+
+        rows = self._execute(_op)
+        result = {}
+        for row in rows:
+            a_id, emb = row[0], row[1]
+            if emb is None:
+                continue
+            if hasattr(emb, "to_numpy"):
+                emb = emb.to_numpy()
+            elif isinstance(emb, np.ndarray):
+                pass
+            elif isinstance(emb, (list, tuple)):
+                emb = np.array(emb, dtype=np.float32)
+            elif isinstance(emb, str):
+                try:
+                    emb = np.array(json.loads(emb), dtype=np.float32)
+                except Exception:
+                    emb = np.fromstring(emb.strip("[]"), sep=",", dtype=np.float32)
+            else:
+                try:
+                    emb = np.array(emb, dtype=np.float32)
+                except Exception:
+                    continue
+            result[a_id] = emb
+        return result
             
     def save_photo(self, aluno_id: str, photo_bytes: bytes):
         if not self.sb: return
@@ -189,21 +205,26 @@ class SupabaseStorage:
     def get_photo_url(self, aluno_id: str):
         if not self.sb: return None
         file_path = f"{aluno_id}.jpg"
-        res = self.sb.storage.from_("fotos-alunos").create_signed_url(file_path, 300) # 5 minutos
-        if isinstance(res, dict) and "signedURL" in res:
-            return res["signedURL"]
-        return res
+        try:
+            res = self.sb.storage.from_("fotos-alunos").create_signed_url(file_path, 300) # 5 minutos
+            if isinstance(res, dict) and "signedURL" in res:
+                return res["signedURL"]
+            return res
+        except Exception as e:
+            print(f"[Supabase Storage] Foto não encontrada para {aluno_id}: {e}")
+            return None
 
     def delete_aluno(self, aluno_id: str):
-        conn = self.get_conn()
-        with conn.cursor() as cur:
-            try:
-                cur.execute("DELETE FROM pedidos WHERE aluno_id = %s", (aluno_id,))
-            except Exception as e:
-                print(f"[Supabase Storage] Aviso ao remover pedidos: {e}")
-            cur.execute("DELETE FROM alunos WHERE id = %s", (aluno_id,))
-        conn.commit()
+        def _op(conn):
+            with conn.cursor() as cur:
+                try:
+                    cur.execute("DELETE FROM pedidos WHERE aluno_id = %s", (aluno_id,))
+                except Exception as e:
+                    print(f"[Supabase Storage] Aviso ao remover pedidos: {e}")
+                cur.execute("DELETE FROM alunos WHERE id = %s", (aluno_id,))
+            conn.commit()
 
+        self._execute(_op)
         if self.sb:
             try:
                 self.sb.storage.from_("fotos-alunos").remove([f"{aluno_id}.jpg"])
@@ -325,7 +346,7 @@ async def identify(file: UploadFile = File(...), turma_id: str = Form(None)):
         
         # 1. Busca primeiro na turma filtrada (se informada)
         all_embeddings = {}
-        if turma_id and turma_id != "todas":
+        if turma_id and turma_id not in ("todas", "undefined", "null", ""):
             all_embeddings = storage.get_all_embeddings(turma_id=turma_id)
             
         # 2. Se a turma filtrada não possui biometrias, busca todas
@@ -341,7 +362,7 @@ async def identify(file: UploadFile = File(...), turma_id: str = Form(None)):
         for a_id, emb in all_embeddings.items():
             try:
                 sim = 1.0 - float(cosine(query_emb, emb)) # similaridade cosseno
-                if sim > best_sim:
+                if not np.isnan(sim) and sim > best_sim:
                     best_sim = sim
                     best_match = a_id
             except Exception as e:
@@ -349,13 +370,13 @@ async def identify(file: UploadFile = File(...), turma_id: str = Form(None)):
                 continue
                 
         # Se não bateu o threshold com a turma filtrada, tenta em todas as turmas
-        if best_sim < THRESHOLD and turma_id and turma_id != "todas":
+        if best_sim < THRESHOLD and turma_id and turma_id not in ("todas", "undefined", "null", ""):
             all_global = storage.get_all_embeddings(turma_id=None)
             for a_id, emb in all_global.items():
                 if a_id not in all_embeddings:
                     try:
                         sim = 1.0 - float(cosine(query_emb, emb))
-                        if sim > best_sim:
+                        if not np.isnan(sim) and sim > best_sim:
                             best_sim = sim
                             best_match = a_id
                     except Exception:
