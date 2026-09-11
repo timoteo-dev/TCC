@@ -97,24 +97,44 @@ class LocalPersistentStorage:
 
 class SupabaseStorage:
     def __init__(self):
-        self.conn = psycopg2.connect(DATABASE_URL)
-        register_vector(self.conn)
+        self.conn = None
+        self._connect()
         if SUPABASE_URL and SUPABASE_KEY:
             self.sb: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
         else:
             self.sb = None
             
+    def _connect(self):
+        try:
+            self.conn = psycopg2.connect(DATABASE_URL)
+            register_vector(self.conn)
+        except Exception as e:
+            print(f"[Supabase Storage] Erro ao conectar banco: {e}")
+            self.conn = None
+            
+    def get_conn(self):
+        if self.conn is None or self.conn.closed != 0:
+            self._connect()
+        else:
+            try:
+                self.conn.rollback() # Limpa qualquer transação abortada anterior
+            except Exception:
+                self._connect()
+        return self.conn
+            
     def save_embedding(self, aluno_id: str, embedding: np.ndarray, model_version: str):
-        with self.conn.cursor() as cur:
+        conn = self.get_conn()
+        with conn.cursor() as cur:
             cur.execute("""
                 UPDATE alunos
                 SET embedding = %s, model_version = %s
                 WHERE id = %s
             """, (embedding, model_version, aluno_id))
-        self.conn.commit()
+        conn.commit()
         
     def get_all_embeddings(self, turma_id: str = None):
-        with self.conn.cursor() as cur:
+        conn = self.get_conn()
+        with conn.cursor() as cur:
             if turma_id and turma_id != "todas":
                 cur.execute("SELECT id, embedding FROM alunos WHERE embedding IS NOT NULL AND model_version = %s AND turma_id = %s", (MODEL_NAME, turma_id))
             else:
@@ -222,62 +242,68 @@ async def enroll(aluno_id: str = Form(...), file: UploadFile = File(...)):
 
 @app.post("/identify")
 async def identify(file: UploadFile = File(...), turma_id: str = Form(None)):
-    contents = await file.read()
-    nparr = np.frombuffer(contents, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    if img is None:
-        raise HTTPException(status_code=400, detail="Imagem inválida")
-        
-    face = get_largest_face(img)
-    if face is None:
-        return {"match": False, "face_detected": False, "reason": "no_face"}
-        
-    query_emb = face.embedding
-    
-    # 1. Busca primeiro na turma filtrada (se informada)
-    all_embeddings = {}
-    if turma_id and turma_id != "todas":
-        all_embeddings = storage.get_all_embeddings(turma_id=turma_id)
-        
-    # 2. Se a turma filtrada não possui biometrias, busca todas
-    if not all_embeddings:
-        all_embeddings = storage.get_all_embeddings(turma_id=None)
-        
-    if not all_embeddings:
-        return {"match": False, "face_detected": True, "reason": "no_enrolled_faces"}
-        
-    best_match = None
-    best_sim = -1.0
-    
-    for a_id, emb in all_embeddings.items():
-        try:
-            sim = 1 - cosine(query_emb, emb) # similaridade cosseno
-            if sim > best_sim:
-                best_sim = sim
-                best_match = a_id
-        except Exception as e:
-            print(f"[Cosine Error] Erro ao comparar aluno {a_id}: {e}")
-            continue
+    try:
+        contents = await file.read()
+        nparr = np.frombuffer(contents, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img is None:
+            raise HTTPException(status_code=400, detail="Imagem inválida")
             
-    # Se não bateu o threshold com a turma filtrada, tenta em todas as turmas
-    if best_sim < THRESHOLD and turma_id and turma_id != "todas":
-        all_global = storage.get_all_embeddings(turma_id=None)
-        for a_id, emb in all_global.items():
-            if a_id not in all_embeddings:
-                try:
-                    sim = 1 - cosine(query_emb, emb)
-                    if sim > best_sim:
-                        best_sim = sim
-                        best_match = a_id
-                except Exception:
-                    continue
-                    
-    print(f"[Identify] Match: {best_match}, Score: {best_sim:.4f} (Threshold: {THRESHOLD})")
-    
-    if best_sim >= THRESHOLD and best_match:
-        return {"match": True, "face_detected": True, "aluno_id": best_match, "score": float(best_sim)}
+        face = get_largest_face(img)
+        if face is None:
+            return {"match": False, "face_detected": False, "reason": "no_face"}
+            
+        query_emb = face.embedding
         
-    return {"match": False, "face_detected": True, "score": float(best_sim), "reason": "below_threshold"}
+        # 1. Busca primeiro na turma filtrada (se informada)
+        all_embeddings = {}
+        if turma_id and turma_id != "todas":
+            all_embeddings = storage.get_all_embeddings(turma_id=turma_id)
+            
+        # 2. Se a turma filtrada não possui biometrias, busca todas
+        if not all_embeddings:
+            all_embeddings = storage.get_all_embeddings(turma_id=None)
+            
+        if not all_embeddings:
+            return {"match": False, "face_detected": True, "reason": "no_enrolled_faces"}
+            
+        best_match = None
+        best_sim = -1.0
+        
+        for a_id, emb in all_embeddings.items():
+            try:
+                sim = 1.0 - float(cosine(query_emb, emb)) # similaridade cosseno
+                if sim > best_sim:
+                    best_sim = sim
+                    best_match = a_id
+            except Exception as e:
+                print(f"[Cosine Error] Erro ao comparar aluno {a_id}: {e}")
+                continue
+                
+        # Se não bateu o threshold com a turma filtrada, tenta em todas as turmas
+        if best_sim < THRESHOLD and turma_id and turma_id != "todas":
+            all_global = storage.get_all_embeddings(turma_id=None)
+            for a_id, emb in all_global.items():
+                if a_id not in all_embeddings:
+                    try:
+                        sim = 1.0 - float(cosine(query_emb, emb))
+                        if sim > best_sim:
+                            best_sim = sim
+                            best_match = a_id
+                    except Exception:
+                        continue
+                        
+        print(f"[Identify] Match: {best_match}, Score: {best_sim:.4f} (Threshold: {THRESHOLD})")
+        
+        if best_sim >= THRESHOLD and best_match:
+            return {"match": True, "face_detected": True, "aluno_id": best_match, "score": float(best_sim)}
+            
+        return {"match": False, "face_detected": True, "score": float(best_sim), "reason": "below_threshold"}
+    except Exception as e:
+        import traceback
+        err_msg = traceback.format_exc()
+        print(f"[Identify Error Traceback]\n{err_msg}")
+        return {"match": False, "face_detected": False, "error": str(e), "traceback": err_msg}
 
 @app.get("/foto-assinada/{aluno_id}")
 def get_foto(aluno_id: str, request: Request):
