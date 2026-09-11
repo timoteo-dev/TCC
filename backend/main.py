@@ -1,5 +1,6 @@
 import os
 import io
+import json
 import cv2
 import numpy as np
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
@@ -27,7 +28,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 if SUPABASE_KEY:
     SUPABASE_KEY = SUPABASE_KEY.strip()
 
-THRESHOLD = float(os.getenv("FACE_MATCH_THRESHOLD", "0.36").strip())
+THRESHOLD = float(os.getenv("FACE_MATCH_THRESHOLD", "0.33").strip())
 MODEL_NAME = 'buffalo_s'
 
 app = FastAPI(title="Reconhecimento Facial API")
@@ -114,12 +115,25 @@ class SupabaseStorage:
         
     def get_all_embeddings(self, turma_id: str = None):
         with self.conn.cursor() as cur:
-            if turma_id:
+            if turma_id and turma_id != "todas":
                 cur.execute("SELECT id, embedding FROM alunos WHERE embedding IS NOT NULL AND model_version = %s AND turma_id = %s", (MODEL_NAME, turma_id))
             else:
                 cur.execute("SELECT id, embedding FROM alunos WHERE embedding IS NOT NULL AND model_version = %s", (MODEL_NAME,))
             rows = cur.fetchall()
-            return {row[0]: row[1] for row in rows}
+            result = {}
+            for row in rows:
+                a_id, emb = row[0], row[1]
+                if emb is None:
+                    continue
+                if isinstance(emb, str):
+                    try:
+                        emb = np.array(json.loads(emb), dtype=np.float32)
+                    except Exception:
+                        emb = np.fromstring(emb.strip("[]"), sep=",", dtype=np.float32)
+                elif not isinstance(emb, np.ndarray):
+                    emb = np.array(emb, dtype=np.float32)
+                result[a_id] = emb
+            return result
             
     def save_photo(self, aluno_id: str, photo_bytes: bytes):
         if not self.sb: return
@@ -216,30 +230,54 @@ async def identify(file: UploadFile = File(...), turma_id: str = Form(None)):
         
     face = get_largest_face(img)
     if face is None:
-        return {"match": False}
+        return {"match": False, "face_detected": False, "reason": "no_face"}
         
     query_emb = face.embedding
     
-    # Se estivéssemos usando pgvector para tudo no banco, faríamos uma query:
-    # SELECT id FROM alunos ORDER BY embedding <=> %s LIMIT 1
-    # Para simplicidade e atender aos dois storages (Memory/Supabase):
-    all_embeddings = storage.get_all_embeddings(turma_id=turma_id)
+    # 1. Busca primeiro na turma filtrada (se informada)
+    all_embeddings = {}
+    if turma_id and turma_id != "todas":
+        all_embeddings = storage.get_all_embeddings(turma_id=turma_id)
+        
+    # 2. Se a turma filtrada não possui biometrias, busca todas
     if not all_embeddings:
-        return {"match": False}
+        all_embeddings = storage.get_all_embeddings(turma_id=None)
+        
+    if not all_embeddings:
+        return {"match": False, "face_detected": True, "reason": "no_enrolled_faces"}
         
     best_match = None
-    best_sim = -1
+    best_sim = -1.0
     
     for a_id, emb in all_embeddings.items():
-        sim = 1 - cosine(query_emb, emb) # similaridade cosseno
-        if sim > best_sim:
-            best_sim = sim
-            best_match = a_id
+        try:
+            sim = 1 - cosine(query_emb, emb) # similaridade cosseno
+            if sim > best_sim:
+                best_sim = sim
+                best_match = a_id
+        except Exception as e:
+            print(f"[Cosine Error] Erro ao comparar aluno {a_id}: {e}")
+            continue
             
-    if best_sim > THRESHOLD:
-        return {"match": True, "aluno_id": best_match, "score": float(best_sim)}
+    # Se não bateu o threshold com a turma filtrada, tenta em todas as turmas
+    if best_sim < THRESHOLD and turma_id and turma_id != "todas":
+        all_global = storage.get_all_embeddings(turma_id=None)
+        for a_id, emb in all_global.items():
+            if a_id not in all_embeddings:
+                try:
+                    sim = 1 - cosine(query_emb, emb)
+                    if sim > best_sim:
+                        best_sim = sim
+                        best_match = a_id
+                except Exception:
+                    continue
+                    
+    print(f"[Identify] Match: {best_match}, Score: {best_sim:.4f} (Threshold: {THRESHOLD})")
+    
+    if best_sim >= THRESHOLD and best_match:
+        return {"match": True, "face_detected": True, "aluno_id": best_match, "score": float(best_sim)}
         
-    return {"match": False, "score": float(best_sim)}
+    return {"match": False, "face_detected": True, "score": float(best_sim), "reason": "below_threshold"}
 
 @app.get("/foto-assinada/{aluno_id}")
 def get_foto(aluno_id: str, request: Request):

@@ -38,7 +38,7 @@ async function carregarTurmasLogin() {
   const selectTurmaFacial = $("facial-turma");
   if (selectTurmaFacial) {
     const options = data.map(t => `<option value="${t.id}">${t.nome}</option>`).join("");
-    selectTurmaFacial.innerHTML = `<option value="" disabled selected>Selecione sua turma...</option>` + options;
+    selectTurmaFacial.innerHTML = `<option value="todas" selected>Todas as turmas (Busca Geral)</option>` + options;
   }
 }
 
@@ -1314,15 +1314,10 @@ const VIDEO  = $("cam-video");
 function checkFacialFields() {
   if (facialActive) return;
   const escola = $("facial-escola");
-  const turma = $("facial-turma");
   const btn = $("btn-cam-on");
   
-  if (escola && turma && btn) {
-    if (escola.value && turma.value) {
-      btn.disabled = false;
-    } else {
-      btn.disabled = true;
-    }
+  if (escola && btn) {
+    btn.disabled = !escola.value;
   }
 }
 
@@ -1438,23 +1433,26 @@ function startDetectionLoop() {
 
 async function identificarRostoNoBackend() {
   if (!facialActive || scanDone) return;
+  if (!VIDEO || VIDEO.readyState < 2 || !VIDEO.videoWidth || !VIDEO.videoHeight) return;
   
   try {
     const canvas = document.createElement("canvas");
     canvas.width = VIDEO.videoWidth;
     canvas.height = VIDEO.videoHeight;
-    // Espelha para capturar corretamente se estiver usando front-cam
+    // Espelha para coincidir com a visualização do usuário na selfie
     const ctx = canvas.getContext("2d");
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
     ctx.drawImage(VIDEO, 0, 0);
     
-    const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", 0.9));
+    const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", 0.85));
+    if (!blob) return;
+
     const formData = new FormData();
     formData.append("file", blob, "frame.jpg");
     
     const selectEl = document.getElementById("facial-turma");
-    if (selectEl && selectEl.value) {
+    if (selectEl && selectEl.value && selectEl.value !== "todas") {
       formData.append("turma_id", selectEl.value);
     }
     
@@ -1463,13 +1461,21 @@ async function identificarRostoNoBackend() {
       body: formData
     });
     
+    if (!res.ok) {
+      console.warn("Falha no endpoint /identify:", res.status);
+      return;
+    }
+
     const data = await res.json();
+    console.log("[Reconhecimento]", data);
+
     if (data.match && data.aluno_id) {
-      scanDone = true; // Para de tentar
+      scanDone = true; // Para o scanner ao identificar
       const s = students.find(al => al.id === data.aluno_id);
+      const scorePct = data.score ? Math.round(data.score * 100) : 100;
       if (s) {
         showIdentified(s);
-        setStatus("green", "Aluno identificado com sucesso");
+        setStatus("green", `Identificado: ${s.name} (${scorePct}%)`);
       } else {
         const { data: dbAluno } = await db.from("alunos").select("id, nome, turma_id, turmas(nome)").eq("id", data.aluno_id).single();
         if (dbAluno) {
@@ -1481,14 +1487,21 @@ async function identificarRostoNoBackend() {
             recreio: false,
             almoco: false
           });
-          setStatus("green", "Aluno identificado com sucesso");
+          setStatus("green", `Identificado: ${dbAluno.nome} (${scorePct}%)`);
         } else {
-          scanDone = false; // Continua tentando
+          scanDone = false;
           setStatus("red", "Aluno não encontrado na base");
         }
       }
+    } else if (data.face_detected) {
+      if (data.score && data.score > 0) {
+        const pct = Math.round(data.score * 100);
+        setStatus("gray", `Rosto detectado (${pct}%). Centralize e aproxime-se...`);
+      } else {
+        setStatus("gray", "Rosto detectado. Analisando...");
+      }
     } else {
-      setStatus("gray", "Procurando rosto...");
+      setStatus("gray", "Posicione o rosto dentro da moldura...");
     }
   } catch(err) {
     console.error("Erro na identificação:", err);
