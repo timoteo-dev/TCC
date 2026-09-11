@@ -21,7 +21,7 @@ if DATABASE_URL:
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 if SUPABASE_URL:
-    SUPABASE_URL = SUPABASE_URL.strip()
+    SUPABASE_URL = SUPABASE_URL.strip().replace("/rest/v1/", "").replace("/rest/v1", "").rstrip("/")
 
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 if SUPABASE_KEY:
@@ -129,7 +129,10 @@ class SupabaseStorage:
             self.sb.storage.from_("fotos-alunos").remove([file_path])
         except:
             pass
-        self.sb.storage.from_("fotos-alunos").upload(file_path, photo_bytes, {"content-type": "image/jpeg"})
+        try:
+            self.sb.storage.from_("fotos-alunos").upload(file_path, photo_bytes, {"content-type": "image/jpeg"})
+        except Exception as e:
+            print(f"[Supabase Storage] Aviso: Falha ao salvar arquivo no bucket ({e})")
         
     def get_photo_url(self, aluno_id: str):
         if not self.sb: return None
