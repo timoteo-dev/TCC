@@ -231,25 +231,114 @@ class SupabaseStorage:
             except Exception as e:
                 print(f"[Supabase Storage] Aviso ao remover foto: {e}")
 
+class FirestoreStorage:
+    def __init__(self, service_account_path: str):
+        import firebase_admin
+        from firebase_admin import credentials, firestore
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(service_account_path)
+            firebase_admin.initialize_app(cred)
+        self.db = firestore.client()
+        self.photos_dir = os.path.join(os.path.dirname(__file__), "fotos_salvas")
+        os.makedirs(self.photos_dir, exist_ok=True)
+        print(f"[Firestore Storage] Conectado ao Firebase Firestore via {os.path.basename(service_account_path)}.")
+
+    def save_embedding(self, aluno_id: str, embedding: np.ndarray, model_version: str):
+        doc_ref = self.db.collection("alunos").document(str(aluno_id))
+        emb_list = embedding.tolist() if hasattr(embedding, "tolist") else list(embedding)
+        doc_ref.set({
+            "embedding": emb_list,
+            "model_version": model_version
+        }, merge=True)
+
+    def get_all_embeddings(self, turma_id: str = None):
+        col = self.db.collection("alunos")
+        if turma_id and turma_id not in ("todas", "undefined", "null", ""):
+            docs = col.where("turma_id", "==", turma_id).stream()
+        else:
+            docs = col.stream()
+
+        result = {}
+        for doc in docs:
+            d = doc.to_dict()
+            emb = d.get("embedding")
+            if not emb:
+                continue
+            mv = d.get("model_version")
+            if mv and mv != MODEL_NAME:
+                continue
+            if isinstance(emb, list):
+                result[doc.id] = np.array(emb, dtype=np.float32)
+            elif isinstance(emb, str):
+                try:
+                    result[doc.id] = np.array(json.loads(emb), dtype=np.float32)
+                except Exception:
+                    pass
+        return result
+
+    def save_photo(self, aluno_id: str, photo_bytes: bytes):
+        file_path = os.path.join(self.photos_dir, f"{aluno_id}.jpg")
+        try:
+            with open(file_path, "wb") as f:
+                f.write(photo_bytes)
+        except Exception as e:
+            print(f"[Firestore Storage] Erro ao salvar miniatura: {e}")
+
+    def get_photo_url(self, aluno_id: str):
+        file_path = os.path.join(self.photos_dir, f"{aluno_id}.jpg")
+        if os.path.exists(file_path):
+            return f"/fotos-locais/{aluno_id}.jpg"
+        return None
+
+    def delete_aluno(self, aluno_id: str):
+        try:
+            pedidos = self.db.collection("pedidos").where("aluno_id", "==", str(aluno_id)).stream()
+            for p in pedidos:
+                p.reference.delete()
+        except Exception as e:
+            print(f"[Firestore Storage] Aviso ao remover pedidos: {e}")
+        try:
+            self.db.collection("alunos").document(str(aluno_id)).delete()
+        except Exception as e:
+            print(f"[Firestore Storage] Erro ao deletar aluno: {e}")
+        file_path = os.path.join(self.photos_dir, f"{aluno_id}.jpg")
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                print(f"[Firestore Storage] Erro ao remover foto: {e}")
+
+# Busca credenciais do Firebase
+sa_candidates = [
+    os.getenv("FIREBASE_SERVICE_ACCOUNT"),
+    os.path.join(os.path.dirname(__file__), "firebase-service-account.json"),
+    os.path.join(os.path.dirname(__file__), "..", "firebase-service-account.json"),
+]
+service_account_path = next((p for p in sa_candidates if p and os.path.exists(p)), None)
+
 try:
-    if DATABASE_URL:
+    if service_account_path:
+        storage = FirestoreStorage(service_account_path)
+    elif DATABASE_URL:
         storage = SupabaseStorage()
         print("[Storage] Conectado ao PostgreSQL/Supabase com sucesso.")
     else:
         storage = LocalPersistentStorage()
         print("[Storage] DATABASE_URL não definida. Usando LocalPersistentStorage.")
 except Exception as e:
-    print(f"[Storage] AVISO: Falha ao conectar ao banco de dados Supabase ({e}).")
+    print(f"[Storage] AVISO: Falha ao inicializar storage preferencial ({e}).")
     print("[Storage] Ativando fallback para LocalPersistentStorage para manter a API online.")
     storage = LocalPersistentStorage()
 
 @app.get("/")
 def read_root():
+    is_fs = "FirestoreStorage" in type(storage).__name__
     is_sb = isinstance(storage, SupabaseStorage)
+    storage_name = "Firebase Firestore" if is_fs else ("Supabase (PostgreSQL)" if is_sb else "Local (Cache)")
     return {
         "status": "online",
         "service": "API Reconhecimento Facial Merenda",
-        "storage": "Supabase (PostgreSQL)" if is_sb else "Local (Cache)"
+        "storage": storage_name
     }
 
 

@@ -4,3 +4,5 @@ __pycache__/
 fotos_salvas/
 embeddings_cache.npz
 .env
+*firebase*.json
+*adminsdk*.json

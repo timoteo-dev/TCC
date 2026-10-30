@@ -20,4 +20,8 @@ venv/
 backend/venv/
 backend/embeddings_cache.npz
 backend/fotos_salvas/
-.env
+
+# Firebase Service Account Keys
+firebase-service-account.json
+backend/firebase-service-account.json
+*adminsdk*.json
