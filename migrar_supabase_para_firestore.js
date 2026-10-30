@@ -73,21 +73,58 @@ async function migrar() {
   await batchTurmas.commit();
   console.log(`✅ ${turmas.length} turmas migradas com sucesso!\n`);
 
-  // 2. PERFIS
-  console.log('📦 Migrando perfis...');
+  // 2. PERFIS + CONTAS DE ACESSO
+  console.log('📦 Migrando perfis e contas de acesso...');
   const perfis = await fetchFromSupabase('perfis');
+  
+  // Mapeia emails registrados no Supabase Auth Admin API
+  const authUsersMap = {};
+  try {
+    const authUrl = SUPABASE_REST_URL.replace('/rest/v1/', '/auth/v1/admin/users');
+    const authRes = await fetch(authUrl, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      }
+    });
+    if (authRes.ok) {
+      const authData = await authRes.json();
+      (authData.users || []).forEach(u => {
+        authUsersMap[u.id] = u.email;
+      });
+    }
+  } catch (e) {
+    console.warn('Aviso: Não foi possível obter emails do auth:', e.message);
+  }
+
   const batchPerfis = firestore.batch();
   for (const p of perfis) {
     const ref = firestore.collection('perfis').doc(p.id);
     batchPerfis.set(ref, {
       id: p.id,
       nome: p.nome,
+      email: authUsersMap[p.id] || null,
       papel: p.papel,
       created_at: p.created_at || new Date().toISOString()
-    });
+    }, { merge: true });
   }
+
+  // Cria perfil de merendeira/cozinha se existir conta auth no Supabase sem registro na tabela perfis
+  for (const [uid, email] of Object.entries(authUsersMap)) {
+    if (!perfis.some(p => p.id === uid)) {
+      const ref = firestore.collection('perfis').doc(uid);
+      batchPerfis.set(ref, {
+        id: uid,
+        nome: email.includes('merenda') ? 'Equipe da Cozinha' : 'Usuário',
+        email: email,
+        papel: email.includes('merenda') ? 'merendeira' : 'coordenador',
+        created_at: new Date().toISOString()
+      }, { merge: true });
+    }
+  }
+
   await batchPerfis.commit();
-  console.log(`✅ ${perfis.length} perfis migrados com sucesso!\n`);
+  console.log(`✅ Perfis e contas de acesso migrados com sucesso!\n`);
 
   // 3. ALUNOS
   console.log('📦 Migrando alunos...');

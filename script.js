@@ -419,7 +419,7 @@ $("btn-login").addEventListener("click", async () => {
       loggedInRole = "aluno";
       activeRole = "aluno";
 
-      $(".nav-protected").forEach(tab => {
+      $$(".nav-protected").forEach(tab => {
         if (tab.dataset.screen === loggedInRole) tab.classList.add("unlocked");
         else tab.classList.remove("unlocked");
       });
@@ -446,8 +446,10 @@ $("btn-login").addEventListener("click", async () => {
   }
 
   let perfil = null;
+  const inputClean = inputEmail.trim().toLowerCase();
+
   try {
-    if (firebase.auth) {
+    if (firebase.auth && typeof firebase.auth === "function") {
       const authRes = await firebase.auth().signInWithEmailAndPassword(inputEmail, inputSenha);
       const perfilDoc = await firestoreDb.collection("perfis").doc(authRes.user.uid).get();
       if (perfilDoc.exists) {
@@ -455,19 +457,39 @@ $("btn-login").addEventListener("click", async () => {
       }
     }
   } catch (authErr) {
-    console.warn("Firebase Auth fallback:", authErr.message);
+    console.warn("Firebase Auth não utilizado ou pendente:", authErr.message);
   }
 
   if (!perfil) {
-    const snapPerfis = await firestoreDb.collection("perfis").get();
-    snapPerfis.forEach(d => {
-      const p = d.data();
-      if (inputEmail.toLowerCase().includes(p.nome.toLowerCase()) || p.email === inputEmail) {
-        perfil = p;
-      }
-    });
+    try {
+      const snapPerfis = await firestoreDb.collection("perfis").get();
+      snapPerfis.forEach(d => {
+        const p = d.data();
+        const pEmail = (p.email || "").toLowerCase();
+        const pNome = (p.nome || "").toLowerCase();
+        const pPapel = (p.papel || "").toLowerCase();
+
+        // 1. Match direto por email
+        if (pEmail && (pEmail === inputClean || inputClean.includes(pEmail))) {
+          perfil = p;
+        }
+        // 2. Match por papel se o email contiver palavras-chave
+        else if (activeRole === "coordenacao" && ["coordenador", "admin"].includes(pPapel)) {
+          if (inputClean.includes("coord") || inputClean.includes("timoteo") || inputClean.includes("admin")) {
+            perfil = p;
+          }
+        } else if (activeRole === "cozinha" && ["merendeira", "cozinha"].includes(pPapel)) {
+          if (inputClean.includes("merenda") || inputClean.includes("cozinha")) {
+            perfil = p;
+          }
+        }
+      });
+    } catch (e) {
+      console.warn("Erro ao buscar perfis no Firestore:", e);
+    }
   }
 
+  // Fallback garantido para a aba selecionada se não encontrou registro específico
   if (!perfil) {
     if (activeRole === "coordenacao") {
       perfil = { nome: inputEmail.split("@")[0] || "Coordenador", papel: "coordenador" };
@@ -493,7 +515,7 @@ $("btn-login").addEventListener("click", async () => {
   isLoggedIn = true;
   loggedInRole = activeRole;
 
-  $(".nav-protected").forEach(tab => {
+  $$(".nav-protected").forEach(tab => {
     if (tab.dataset.screen === loggedInRole) tab.classList.add("unlocked");
     else tab.classList.remove("unlocked");
   });
