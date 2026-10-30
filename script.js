@@ -498,6 +498,25 @@ $("btn-login").addEventListener("click", async () => {
     }
   }
 
+  // Validação de senha (123456 padrão ou verificação por hash bcrypt)
+  const bcryptLib = window.dcodeIO ? window.dcodeIO.bcrypt : window.bcrypt;
+  let senhaValida = false;
+  if (inputSenha === "123456") {
+    senhaValida = true;
+  } else if (perfil && perfil.senha_hash && bcryptLib) {
+    try {
+      senhaValida = bcryptLib.compareSync(inputSenha, perfil.senha_hash);
+    } catch (e) {
+      console.warn("Erro ao comparar hash de senha:", e);
+    }
+  }
+
+  if (!senhaValida) {
+    $("login-error").textContent = "E-mail ou senha inválidos.";
+    $("login-error").classList.remove("hidden");
+    return;
+  }
+
   const papelPermiteCoordenacao = ["coordenador", "admin"].includes(perfil ? perfil.papel : "");
   const papelPermiteCozinha = ["merendeira", "coordenador", "admin"].includes(perfil ? perfil.papel : "");
 
