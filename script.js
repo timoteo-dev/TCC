@@ -20,7 +20,26 @@ if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
 const firestoreDb = firebase.firestore();
-const FACE_BACKEND_URL = "https://api-merenda-facial.onrender.com";
+let FACE_BACKEND_URL = "https://api-merenda-facial.onrender.com";
+
+// Tenta detectar backend facial local (porta 8000 via iniciar_backend.bat) se estiver executando localmente
+async function detectarBackendFacial() {
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.protocol === "file:") {
+    try {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 1200);
+      const res = await fetch("http://127.0.0.1:8000/health", { signal: controller.signal });
+      clearTimeout(t);
+      if (res.ok) {
+        FACE_BACKEND_URL = "http://127.0.0.1:8000";
+        console.log("Conectado ao backend facial local: http://127.0.0.1:8000");
+      }
+    } catch(e) {
+      // Backend local desligado, mantém nuvem (Render)
+    }
+  }
+}
+detectarBackendFacial();
 
 async function carregarTurmasLogin() {
   try {
@@ -2280,7 +2299,11 @@ if (fBtnSave) {
       
     } catch(err) {
       console.error(err);
-      fErrorMsg.textContent = "Erro ao enviar foto: " + err.message;
+      let msg = err.message || "";
+      if (msg === "Failed to fetch") {
+        msg = "Falha de conexão com a API de reconhecimento facial. Se estiver rodando localmente, execute o arquivo iniciar_backend.bat. Se estiver no Render, verifique se a API subiu.";
+      }
+      fErrorMsg.textContent = "Erro ao enviar foto: " + msg;
       fErrorMsg.classList.remove("hidden");
       fStatus.textContent = "Erro no envio.";
     } finally {

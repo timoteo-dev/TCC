@@ -4,6 +4,7 @@ import json
 import cv2
 import numpy as np
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
@@ -40,6 +41,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    print(f"[Unhandled Error] {exc}\n{traceback.format_exc()}")
+    response = JSONResponse(
+        status_code=500,
+        content={"detail": f"Erro interno do servidor facial: {str(exc)}"}
+    )
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
 
 photos_dir = os.path.join(os.path.dirname(__file__), "fotos_salvas")
 os.makedirs(photos_dir, exist_ok=True)
@@ -117,11 +131,12 @@ class SupabaseStorage:
             
     def _connect(self):
         try:
-            self.conn = psycopg2.connect(DATABASE_URL)
+            self.conn = psycopg2.connect(DATABASE_URL, connect_timeout=5)
             register_vector(self.conn)
         except Exception as e:
             print(f"[Supabase Storage] Erro ao conectar banco: {e}")
             self.conn = None
+            raise
             
     def get_conn(self):
         if self.conn is None or self.conn.closed != 0:
@@ -232,16 +247,15 @@ class SupabaseStorage:
                 print(f"[Supabase Storage] Aviso ao remover foto: {e}")
 
 class FirestoreStorage:
-    def __init__(self, service_account_path: str):
+    def __init__(self, cred):
         import firebase_admin
-        from firebase_admin import credentials, firestore
+        from firebase_admin import firestore
         if not firebase_admin._apps:
-            cred = credentials.Certificate(service_account_path)
             firebase_admin.initialize_app(cred)
         self.db = firestore.client()
         self.photos_dir = os.path.join(os.path.dirname(__file__), "fotos_salvas")
         os.makedirs(self.photos_dir, exist_ok=True)
-        print(f"[Firestore Storage] Conectado ao Firebase Firestore via {os.path.basename(service_account_path)}.")
+        print("[Firestore Storage] Conectado ao Firebase Firestore com sucesso.")
 
     def save_embedding(self, aluno_id: str, embedding: np.ndarray, model_version: str):
         doc_ref = self.db.collection("alunos").document(str(aluno_id))
@@ -308,23 +322,59 @@ class FirestoreStorage:
             except Exception as e:
                 print(f"[Firestore Storage] Erro ao remover foto: {e}")
 
-# Busca credenciais do Firebase
-sa_candidates = [
-    os.getenv("FIREBASE_SERVICE_ACCOUNT"),
-    os.path.join(os.path.dirname(__file__), "firebase-service-account.json"),
-    os.path.join(os.path.dirname(__file__), "..", "firebase-service-account.json"),
-]
-service_account_path = next((p for p in sa_candidates if p and os.path.exists(p)), None)
+def get_firebase_credentials():
+    import firebase_admin
+    from firebase_admin import credentials
+
+    # 1. Tenta carregar via variável de ambiente (caminho, JSON puro ou Base64)
+    env_sa = os.getenv("FIREBASE_SERVICE_ACCOUNT") or os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+    if env_sa:
+        env_sa = env_sa.strip()
+        if os.path.exists(env_sa):
+            return credentials.Certificate(env_sa)
+        if env_sa.startswith("{"):
+            try:
+                data = json.loads(env_sa)
+                return credentials.Certificate(data)
+            except Exception as e:
+                print(f"[Firestore Storage] Falha ao fazer parse do JSON de FIREBASE_SERVICE_ACCOUNT: {e}")
+        try:
+            import base64
+            decoded = base64.b64decode(env_sa).decode("utf-8")
+            if decoded.startswith("{"):
+                data = json.loads(decoded)
+                return credentials.Certificate(data)
+        except Exception:
+            pass
+
+    # 2. Tenta carregar de arquivos locais comuns / Render Secret Files
+    file_candidates = [
+        os.path.join(os.path.dirname(__file__), "firebase-service-account.json"),
+        os.path.join(os.path.dirname(__file__), "..", "firebase-service-account.json"),
+        "/etc/secrets/firebase-service-account.json",
+    ]
+    for p in file_candidates:
+        if os.path.exists(p):
+            return credentials.Certificate(p)
+
+    return None
+
+# Inicialização inteligente do Storage
+firebase_cred = None
+try:
+    firebase_cred = get_firebase_credentials()
+except Exception as e:
+    print(f"[Storage] Erro ao carregar credenciais do Firebase: {e}")
 
 try:
-    if service_account_path:
-        storage = FirestoreStorage(service_account_path)
-    elif DATABASE_URL:
+    if firebase_cred:
+        storage = FirestoreStorage(firebase_cred)
+    elif DATABASE_URL and ("supabase.co" not in DATABASE_URL or os.getenv("ENABLE_SUPABASE") == "true"):
         storage = SupabaseStorage()
         print("[Storage] Conectado ao PostgreSQL/Supabase com sucesso.")
     else:
         storage = LocalPersistentStorage()
-        print("[Storage] DATABASE_URL não definida. Usando LocalPersistentStorage.")
+        print("[Storage] Usando LocalPersistentStorage (memória/cache local).")
 except Exception as e:
     print(f"[Storage] AVISO: Falha ao inicializar storage preferencial ({e}).")
     print("[Storage] Ativando fallback para LocalPersistentStorage para manter a API online.")
@@ -333,7 +383,7 @@ except Exception as e:
 @app.get("/")
 def read_root():
     is_fs = "FirestoreStorage" in type(storage).__name__
-    is_sb = isinstance(storage, SupabaseStorage)
+    is_sb = "SupabaseStorage" in type(storage).__name__
     storage_name = "Firebase Firestore" if is_fs else ("Supabase (PostgreSQL)" if is_sb else "Local (Cache)")
     return {
         "status": "online",
