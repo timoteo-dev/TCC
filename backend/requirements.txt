@@ -11,3 +11,4 @@ pgvector
 supabase
 python-dotenv
 firebase-admin
+gradio
