@@ -20,7 +20,7 @@ if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
 const firestoreDb = firebase.firestore();
-let FACE_BACKEND_URL = "https://api-merenda-facial.onrender.com";
+let FACE_BACKEND_URL = "https://timoteo07-merenda-tcc.hf.space";
 
 // Tenta detectar backend facial local (porta 8000 via iniciar_backend.bat) se estiver executando localmente
 async function detectarBackendFacial() {

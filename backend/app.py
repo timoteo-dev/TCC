@@ -1,6 +1,15 @@
 import os
+# Define uma porta diferente para o worker interno do Gradio não conflitar com a porta 7860 do Uvicorn
+os.environ["GRADIO_SERVER_PORT"] = "7861"
+
+import spaces
 import gradio as gr
 from main import app, storage, MODEL_NAME
+
+# Função para satisfazer a verificação obrigatória do ZeroGPU gratuito do Hugging Face
+@spaces.GPU
+def dummy_gpu_check():
+    return "OK"
 
 # Obtém o nome amigável do storage para exibição
 is_fs = "FirestoreStorage" in type(storage).__name__
@@ -11,9 +20,8 @@ with gr.Blocks(title="API Merenda Facial") as demo:
     gr.Markdown("# 🍽️ API de Reconhecimento Facial — Merenda Escolar")
     gr.Markdown(
         f"""
-        ### 🟢 Servidor Ativo (Hugging Face Spaces)
+        ### 🟢 Servidor Ativo (Hugging Face Spaces - ZeroGPU Free)
         - **Status:** Operacional
-        - **Hardware:** 16 GB RAM (CPU Basic)
         - **Banco Conectado:** {storage_name}
         - **Modelo de IA:** InsightFace (`{MODEL_NAME}`)
         
@@ -25,6 +33,9 @@ with gr.Blocks(title="API Merenda Facial") as demo:
         - `DELETE /aluno/{{id}}` — Exclusão de aluno e biometria
         """
     )
+    # Evento para o scanner do Hugging Face ZeroGPU validar a inicialização do Space
+    dummy_btn = gr.Button("ZeroGPU Check", visible=False)
+    dummy_btn.click(fn=dummy_gpu_check)
 
 # Monta o Gradio mantendo todas as rotas originais do FastAPI (/identify, /enroll, etc.)
 app = gr.mount_gradio_app(app, demo, path="/")

@@ -2,7 +2,7 @@ fastapi
 uvicorn
 python-multipart
 insightface
-onnxruntime==1.16.3
+onnxruntime>=1.17.0
 opencv-python-headless==4.9.0.80
 numpy==1.26.4
 scipy
