@@ -398,6 +398,20 @@ $("btn-login").addEventListener("click", async () => {
   goTo(loggedInRole);
 });
 
+// Permitir login ao pressionar Enter nos campos de entrada
+["input-email", "input-senha", "input-nome"].forEach(id => {
+  const el = $(id);
+  if (el) {
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const btnLogin = $("btn-login");
+        if (btnLogin) btnLogin.click();
+      }
+    });
+  }
+});
+
 /* ── TELA ALUNO ──────────────────────────────────────────── */
 const selectedMeals = { recreio: false, almoco: false };
 
@@ -1781,6 +1795,7 @@ function openGestaoFacial() {
 function closeGestaoFacial() {
   if (viewFacial) viewFacial.classList.add("hidden");
   stopFacialCamera();
+  if (fCamSection) fCamSection.classList.add("hidden");
   renderCoord(); // Volta pra view de turmas
 }
 
@@ -1817,6 +1832,8 @@ function stopFacialCamera() {
 
 if (btnGestaoFacial) btnGestaoFacial.addEventListener("click", openGestaoFacial);
 if (crumbToClassesFacial) crumbToClassesFacial.addEventListener("click", closeGestaoFacial);
+const btnFacialBackClasses = $("btn-facial-back-classes");
+if (btnFacialBackClasses) btnFacialBackClasses.addEventListener("click", closeGestaoFacial);
 
 if (fSelectTurma) {
   fSelectTurma.addEventListener("change", () => {
